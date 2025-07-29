@@ -1,0 +1,33 @@
+/controllers
+    AuthController.php
+    ProductController.php
+    SupplierController.php
+    OrderController.php
+    ShipmentController.php
+    PaymentController.php
+
+/models
+    User.php
+    Product.php
+    Variant.php
+    Supplier.php
+    Order.php
+    OrderItem.php
+    Shipment.php
+    ShipmentItem.php
+    Payment.php
+    PaymentAllocation.php
+
+/views
+    /auth/
+    /products/
+    /stocks/
+    /suppliers/
+    /orders/
+    /shipments/
+    /payments/
+    /dashboard/
+
+/routes.php
+/index.php
+/db.php

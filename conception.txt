@@ -1,0 +1,110 @@
+🔐 Authentification
+Route	Description
+/login	Connexion
+/register	Inscription (admin uniquement ou manuelle)
+/logout	Déconnexion
+
+📦 Produits
+Route	Description
+/products	Liste des produits avec leurs variantes
+/products/create	Formulaire d’ajout produit + variantes
+/products/store	Enregistrement produit + variantes (POST)
+/products/edit/:id	Modifier produit + variantes
+/products/update/:id	Sauvegarde modification produit (POST)
+/products/delete/:id	Suppression d’un produit
+/products/:id/variants	Détail des variantes d’un produit
+/products/:id/variants/add	Ajouter une variante spécifique
+
+📊 Stocks
+Route	Description
+/stocks	Gestion des stocks par produit/variante
+/stocks/update/:id	Mise à jour rapide du stock d’une variante (POST)
+
+🤝 Fournisseurs
+Route	Description
+/suppliers	Liste des fournisseurs
+/suppliers/create	Ajouter un fournisseur
+/suppliers/store	Enregistrer un fournisseur (POST)
+/suppliers/edit/:id	Modifier un fournisseur
+/suppliers/update/:id	Sauvegarder modification fournisseur
+/suppliers/delete/:id	Supprimer un fournisseur
+/suppliers/:id/details	Voir commandes, paiements, solde global
+
+📋 Commandes (fournisseurs) + Envois partiels
+Route	Description
+/orders	Liste des commandes fournisseurs
+/orders/create	Formulaire ajout commande
+/orders/store	Enregistrement commande + variantes + quantités
+/orders/view/:id	Détail de la commande (produits, statut, paiements, envois)
+/orders/edit/:id	Modifier une commande
+/orders/delete/:id	Supprimer une commande
+/orders/:id/shipments/create	Ajouter un envoi partiel
+/orders/:id/shipments	Voir l’historique des livraisons
+
+🚚 Envois partiels (Shipments)
+Route	Description
+/shipments	Liste de tous les envois
+/shipments/:id/items	Détail des quantités envoyées par produit
+/shipments/edit/:id	Modifier un envoi
+/shipments/delete/:id	Supprimer un envoi
+
+💸 Paiements (avec affectation par commande)
+Route	Description
+/payments	Liste des paiements
+/payments/create	Ajouter un nouveau paiement
+/payments/store	Sauvegarder paiement + allocations (POST)
+/payments/:id	Détail du paiement (montant total, commandes liées)
+/payments/edit/:id	Modifier paiement
+/payments/delete/:id	Supprimer paiement
+
+🔗 Affectation des paiements
+Route	Description
+/payments/:id/allocations	Voir et gérer les montants affectés à des commandes
+/payments/:id/allocations/add	Ajouter une ligne d’affectation à une commande
+/payments/:id/allocations/remove/:aid	Supprimer une ligne d’affectation
+
+📈 Dashboard
+Route	Description
+/dashboard	Vue globale :
+- Stock faible
+- Commandes à livrer / livrées partiellement
+- Paiements effectués / restants
+- Graphiques par produit / fournisseur / évolution temps
+
+🗂 Structure technique du projet PHP (recommandée)
+bash
+Copy
+Edit
+/controllers
+    AuthController.php
+    ProductController.php
+    SupplierController.php
+    OrderController.php
+    ShipmentController.php
+    PaymentController.php
+
+/models
+    User.php
+    Product.php
+    Variant.php
+    Supplier.php
+    Order.php
+    OrderItem.php
+    Shipment.php
+    ShipmentItem.php
+    Payment.php
+    PaymentAllocation.php
+
+/views
+    /auth/
+    /products/
+    /stocks/
+    /suppliers/
+    /orders/
+    /shipments/
+    /payments/
+    /dashboard/
+
+/routes.php
+/index.php
+/db.php
