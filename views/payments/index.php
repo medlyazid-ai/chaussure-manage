@@ -1,4 +1,7 @@
-<?php include 'views/layout/header.php'; ?>
+<?php
+require_once 'auth_check.php';
+include 'views/layout/header.php';
+?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>💰 Liste des paiements fournisseurs</h2>

@@ -1,3 +1,7 @@
+<?php
+require_once 'auth_check.php';
+include 'views/layout/header.php';
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -29,6 +33,10 @@
                                 <button type="submit" class="btn btn-success">S’inscrire</button>
                             </div>
                         </form>
+                        <?php if (isset($_SESSION['success'])): ?>
+                            <div class="alert alert-success"><?= $_SESSION['success']; unset($_SESSION['success']); ?></div>
+                        <?php endif; ?>
+
                         <div class="text-center mt-3">
                             <a href="?route=login">Déjà inscrit ? Se connecter</a>
                         </div>

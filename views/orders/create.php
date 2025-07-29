@@ -1,4 +1,7 @@
-<?php include 'views/layout/header.php'; ?>
+<?php
+require_once 'auth_check.php';
+include 'views/layout/header.php';
+?>
 
 <div class="container mt-4">
     <h2>📝 Nouvelle commande</h2>

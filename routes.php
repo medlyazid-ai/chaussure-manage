@@ -1,7 +1,7 @@
 <?php
 $route = $_GET['route'] ?? '';
 
-// Contrôleurs
+// 📦 Importation des contrôleurs
 require_once 'controllers/AuthController.php';
 require_once 'controllers/ProductController.php';
 require_once 'controllers/SupplierController.php';
@@ -10,100 +10,150 @@ require_once 'controllers/PaymentController.php';
 require_once 'controllers/ShipmentController.php';
 
 
-// ✅ Route spéciale show order (en dehors du switch)
+// ✅ Route spéciale "show order" (car hors structure REST classique)
 if (preg_match('#^orders/show/(\d+)$#', $route, $matches)) {
     showOrder($matches[1]);
     return;
 }
 
 
-// ROUTING PAR MODULE
+// =========================
+// 🔁 ROUTING PRINCIPAL
+// =========================
 switch ($route) {
 
-    // 🔐 Auth
+    // ----------------------
+    // 🔐 Authentification
+    // ----------------------
     case 'login':
-        $_SERVER['REQUEST_METHOD'] === 'POST' ? login() : loginForm(); break;
+        $_SERVER['REQUEST_METHOD'] === 'POST' ? login() : loginForm();
+        break;
+
     case 'register':
-        $_SERVER['REQUEST_METHOD'] === 'POST' ? register() : registerForm(); break;
+        $_SERVER['REQUEST_METHOD'] === 'POST' ? register() : registerForm();
+        break;
+
     case 'logout':
-        logout(); break;
+        logout();
+        break;
 
     case 'dashboard':
-        include 'views/dashboard/index.php'; break;
+        include 'views/dashboard/index.php';
+        break;
 
 
-    // 📦 Produits
+    // ----------------------
+    // 👞 Produits
+    // ----------------------
     case 'products':
-        listProducts(); break;
+        listProducts();
+        break;
     case 'products/create':
-        showCreateForm(); break;
+        showCreateForm();
+        break;
     case 'products/store':
-        storeProduct(); break;
-    case (preg_match('/^products\/edit\/(\d+)$/', $route, $m) ? true : false):
-        showEditForm($m[1]); break;
-    case (preg_match('/^products\/update\/(\d+)$/', $route, $m) ? true : false):
-        updateProduct($m[1]); break;
-    case (preg_match('/^products\/delete\/(\d+)$/', $route, $m) ? true : false):
-        deleteProduct($m[1]); break;
+        storeProduct();
+        break;
+    case (preg_match('#^products/edit/(\d+)$#', $route, $m) ? true : false):
+        showEditForm($m[1]);
+        break;
+    case (preg_match('#^products/update/(\d+)$#', $route, $m) ? true : false):
+        updateProduct($m[1]);
+        break;
+    case (preg_match('#^products/delete/(\d+)$#', $route, $m) ? true : false):
+        deleteProduct($m[1]);
+        break;
 
 
+    // ----------------------
     // 👤 Fournisseurs
+    // ----------------------
     case 'suppliers':
-        listSuppliers(); break;
+        listSuppliers();
+        break;
     case 'suppliers/create':
-        showCreateSupplierForm(); break;
+        showCreateSupplierForm();
+        break;
     case 'suppliers/store':
-        storeSupplier(); break;
+        storeSupplier();
+        break;
     case (preg_match('#^suppliers/edit/(\d+)$#', $route, $m) ? true : false):
-        showEditSupplierForm($m[1]); break;
+        showEditSupplierForm($m[1]);
+        break;
     case (preg_match('#^suppliers/update/(\d+)$#', $route, $m) ? true : false):
-        updateSupplier($m[1]); break;
+        updateSupplier($m[1]);
+        break;
     case (preg_match('#^suppliers/delete/(\d+)$#', $route, $m) ? true : false):
-        deleteSupplier($m[1]); break;
+        deleteSupplier($m[1]);
+        break;
     case 'suppliers/dashboard':
-	    dashboard();
-	    break;
+        dashboard();
+        break;
 
 
+    // ----------------------
     // 💰 Paiements
+    // ----------------------
     case 'payments':
-        listPayments(); break;
+        listPayments();
+        break;
     case 'payments/create':
-        showCreatePaymentForm(); break;
+        showCreatePaymentForm();
+        break;
     case 'payments/store':
-        storePayment(); break;
+        storePayment();
+        break;
     case 'payments/fetch_orders_by_supplier':
-        fetchOrdersBySupplier($_GET['supplier_id']); break;
+        fetchOrdersBySupplier($_GET['supplier_id']);
+        break;
     case (preg_match('#^payments/delete/(\d+)$#', $route, $m) ? true : false):
-        deletePayment($m[1]); break;
+        deletePayment($m[1]);
+        break;
 
 
+    // ----------------------
     // 📦 Commandes
+    // ----------------------
     case 'orders':
-        listOrders(); break;
+        listOrders();
+        break;
     case 'orders/create':
-        showCreateOrderForm(); break;
+        showCreateOrderForm();
+        break;
     case 'orders/store':
-        storeOrder(); break;
+        storeOrder();
+        break;
     case (preg_match('#^orders/delete/(\d+)$#', $route, $m) ? true : false):
-        deleteOrder($m[1]); break;
+        deleteOrder($m[1]);
+        break;
 
 
-    // 🚚 Envois
+    // ----------------------
+    // 🚚 Envois (Shipments)
+    // ----------------------
     case 'shipments':
-        listShipments(); break;
+        listShipments();
+        break;
     case 'shipments/create':
-        showCreateShipmentForm(); break;
+        showCreateShipmentForm();
+        break;
     case 'shipments/store':
-        storeShipment(); break;
+        storeShipment();
+        break;
     case (preg_match('#^shipments/delete/(\d+)$#', $route, $m) ? true : false):
-        deleteShipment($m[1]); break;
+        deleteShipment($m[1]);
+        break;
     case (preg_match('#^shipments/show/(\d+)$#', $route, $m) ? true : false):
-        showShipment($m[1]); break;
+        showShipment($m[1]);
+        break;
     case (preg_match('#^shipments/update_status/(\d+)$#', $route, $m) ? true : false):
-        updateShipmentStatus($m[1]); break;
+        updateShipmentStatus($m[1]);
+        break;
 
-    // 🚨 Page introuvable
+
+    // ----------------------
+    // ❌ Par défaut : erreur 404
+    // ----------------------
     default:
         echo "404 - Page non trouvée.";
         break;

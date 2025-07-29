@@ -1,4 +1,7 @@
-<?php include 'views/layout/header.php'; ?>
+<?php
+require_once 'auth_check.php';
+include 'views/layout/header.php';
+?>
 <?php require_once 'models/Shipment.php'; ?>
 <?php require_once 'models/Order.php'; ?>
 
