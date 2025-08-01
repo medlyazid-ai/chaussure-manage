@@ -1,0 +1,13 @@
+stages:
+  - deploy
+
+deploy_production:
+  stage: deploy
+  only:
+    - main  # ou la branche que vous voulez
+  script:
+    - echo "💡 Lancement du déploiement via SSH"
+    - mkdir -p ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh -o StrictHostKeyChecking=no quwaejeq@node203-eu.n0c.com "cd /chemin/vers/votre/projet && git pull origin main"

@@ -120,12 +120,48 @@ include 'views/layout/header.php';
                         <td><?= $order['total_quantity'] ?></td>
                         <td><?= number_format($total, 2) ?> MAD</td>
                         <td><?= number_format($paid, 2) ?> MAD</td>
-                        <td><span class="badge bg-<?= $badge ?>"><?= htmlspecialchars($order['status']) ?></span></td>
+                        <td><span class="badge bg-<?= $badge ?>">
+                            <button class="btn btn-sm btn-<?= $badge ?>" data-bs-toggle="modal" data-bs-target="#modalStatus<?= $order['id'] ?>" title="Changer statut">
+                                <?= htmlspecialchars($order['status']) ?>
+                                <i class="bi bi-arrow-repeat">✏️</i>
+                            </button></span>
+                        </td>
                         <td><?= date('d/m/Y H:i', strtotime($order['created_at'])) ?></td>
                         <td class="text-nowrap">
                             <a href="?route=orders/show/<?= $order['id'] ?>" class="btn btn-sm btn-primary">👁️</a>
+                                <a href="?route=orders/edit/<?= $order['id'] ?>" class="btn btn-sm btn-warning" title="Modifier">
+                                    <i class="bi bi-pencil">✏️</i>
+                                </a>
                             <button class="btn btn-sm btn-info" onclick="toggleDetails(<?= $order['id'] ?>)">🧩</button>
                             <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalDelete<?= $order['id'] ?>">🗑️</button>
+
+
+
+                            <div class="modal fade" id="modalStatus<?= $order['id'] ?>" tabindex="-1" aria-labelledby="statusLabel<?= $order['id'] ?>" aria-hidden="true">
+                              <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                  <form method="POST" action="?route=orders/update-status/<?= $order['id'] ?>">
+                                    <div class="modal-header bg-dark text-white">
+                                      <h5 class="modal-title" id="statusLabel<?= $order['id'] ?>">Modifier le statut de la commande #<?= $order['id'] ?></h5>
+                                      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                      <label for="statusSelect<?= $order['id'] ?>" class="form-label">Nouveau statut</label>
+                                      <select name="status" id="statusSelect<?= $order['id'] ?>" class="form-select" required>
+                                        <?php foreach (['Initial', 'Validé et en cours de production', 'Envoi partiel', 'Envoi complet', 'Livré à la destination'] as $status): ?>
+                                          <option value="<?= $status ?>" <?= $status === $order['status'] ? 'selected' : '' ?>><?= $status ?></option>
+                                        <?php endforeach; ?>
+                                      </select>
+                                    </div>
+                                    <div class="modal-footer">
+                                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                      <button type="submit" class="btn btn-dark">Mettre à jour</button>
+                                    </div>
+                                  </form>
+                                </div>
+                              </div>
+                            </div>
+
 
                             <!-- Modal suppression -->
                             <div class="modal fade" id="modalDelete<?= $order['id'] ?>" tabindex="-1" aria-labelledby="modalLabel<?= $order['id'] ?>" aria-hidden="true">

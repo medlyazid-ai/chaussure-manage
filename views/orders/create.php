@@ -18,16 +18,18 @@ include 'views/layout/header.php';
             </select>
         </div>
 
-        <!-- Choix du pays de destination -->
         <div class="mb-3">
-            <label for="destination_country" class="form-label">📍 Pays de destination</label>
-            <select name="destination_country" id="destination_country" class="form-select" required>
-                <option value="">-- Choisir un pays --</option>
-                <option value="Guinée">🇬🇳 Guinée</option>
-                <option value="Côte d'Ivoire">🇨🇮 Côte d'Ivoire</option>
-                <option value="Mali">🇲🇱 Mali</option>
-            </select>
-        </div>
+        <label for="country_id" class="form-label">📍 Pays de destination</label>
+        <select name="country_id" id="country_id" class="form-select" required>
+            <option value="">-- Choisir un pays --</option>
+            <?php foreach ($countries as $country): ?>
+                <option value="<?= $country['id'] ?>">
+                    <?= $country['flag'] . ' ' . $country['name'] ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+
 
 
         <!-- Choix du produit -->

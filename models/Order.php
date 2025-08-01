@@ -14,33 +14,97 @@ class Order {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public static function allWithCountry() {
+        global $pdo;
+
+        $stmt = $pdo->query("
+            SELECT o.*, s.name AS supplier_name, c.name AS destination_country, c.flag
+            FROM orders o
+            JOIN suppliers s ON o.supplier_id = s.id
+            JOIN countries c ON o.country_id = c.id
+            ORDER BY o.created_at DESC
+        ");
+
+        return $stmt->fetchAll();
+    }
+
+    public static function update($id, $data) {
+        global $pdo;
+        $stmt = $pdo->prepare("UPDATE orders SET supplier_id = ?, country_id = ?, product_id = ? WHERE id = ?");
+        return $stmt->execute([
+            $data['supplier_id'],
+            $data['country_id'],
+            $data['product_id'],
+            $id
+        ]);
+    }
+
+    public static function deleteOrderItems($orderId) {
+        global $pdo;
+        $stmt = $pdo->prepare("DELETE FROM order_items WHERE order_id = ?");
+        $stmt->execute([$orderId]);
+    }
+
+    public static function addOrderItem($orderId, $variant, $productId) {
+        global $pdo;
+
+        // 1. Rechercher la variante existante
+        $stmtFind = $pdo->prepare("SELECT id FROM variants WHERE product_id = ? AND size = ? AND color = ?");
+        $stmtFind->execute([
+            $productId,
+            $variant['size'],
+            $variant['color']
+        ]);
+        $existingVariant = $stmtFind->fetch(PDO::FETCH_ASSOC);
+
+        // 2. Si elle n'existe pas, l'insérer
+        if (!$existingVariant) {
+            $sku = strtoupper($productId . '-' . $variant['size'] . '-' . $variant['color']);
+            $stmtInsert = $pdo->prepare("INSERT INTO variants (product_id, size, color, sku) VALUES (?, ?, ?, ?)");
+            $stmtInsert->execute([
+                $productId,
+                $variant['size'],
+                $variant['color'],
+                $sku
+            ]);
+            $variantId = $pdo->lastInsertId();
+        } else {
+            $variantId = $existingVariant['id'];
+        }
+
+        // 3. Ajouter dans order_items
+        $stmtAddItem = $pdo->prepare("INSERT INTO order_items (order_id, variant_id, quantity_ordered, unit_price) VALUES (?, ?, ?, ?)");
+        $stmtAddItem->execute([
+            $orderId,
+            $variantId,
+            $variant['quantity_ordered'],
+            $variant['unit_price']
+        ]);
+    }
+
+
     public static function create($data) {
         global $pdo;
 
         $variants = $data['variants'] ?? [];
-
-        // Total quantité commandée
         $totalQuantity = array_sum(array_column($variants, 'quantity_ordered'));
 
-        // Création de la commande
-        $stmt = $pdo->prepare("INSERT INTO orders (supplier_id, product_id, destination_country, status, total_quantity) VALUES (?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO orders (supplier_id, product_id, country_id, status, total_quantity) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([
             $data['supplier_id'],
             $data['product_id'],
-            $data['destination_country'],
+            $data['country_id'],
             'Initial',
             $totalQuantity
         ]);
 
         $orderId = $pdo->lastInsertId();
 
-        // Requêtes préparées
         $stmtFindVariant = $pdo->prepare("SELECT id FROM variants WHERE product_id = ? AND size = ? AND color = ?");
         $stmtInsertVariant = $pdo->prepare("INSERT INTO variants (product_id, size, color, sku) VALUES (?, ?, ?, ?)");
         $stmtInsertItem = $pdo->prepare("INSERT INTO order_items (order_id, variant_id, quantity_ordered, unit_price) VALUES (?, ?, ?, ?)");
 
         foreach ($variants as $v) {
-            // 1. Rechercher variante existante
             $stmtFindVariant->execute([$data['product_id'], $v['size'], $v['color']]);
             $variant = $stmtFindVariant->fetch(PDO::FETCH_ASSOC);
 
@@ -57,7 +121,6 @@ class Order {
                 $variantId = $pdo->lastInsertId();
             }
 
-            // 2. Insertion dans order_items
             $stmtInsertItem->execute([
                 $orderId,
                 $variantId,
@@ -120,9 +183,14 @@ class Order {
 
     public static function allWithSupplier() {
         global $pdo;
-        $sql = "SELECT o.*, s.name AS supplier_name 
+        $sql = "SELECT 
+                    o.*, 
+                    s.name AS supplier_name,
+                    c.name AS destination_country,
+                    c.flag AS country_flag
                 FROM orders o
                 JOIN suppliers s ON o.supplier_id = s.id
+                JOIN countries c ON o.country_id = c.id
                 ORDER BY o.created_at DESC";
         $stmt = $pdo->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -132,9 +200,10 @@ class Order {
     public static function findWithSupplier($orderId) {
         global $pdo;
         $stmt = $pdo->prepare("
-            SELECT o.*, s.name AS supplier_name
+            SELECT o.*, s.name AS supplier_name, c.name AS destination_country, c.flag
             FROM orders o
             JOIN suppliers s ON o.supplier_id = s.id
+            JOIN countries c ON o.country_id = c.id
             WHERE o.id = ?
         ");
         $stmt->execute([$orderId]);
@@ -217,10 +286,10 @@ class Order {
         global $pdo;
 
         $sql = "
-            SELECT o.*, s.name AS supplier_name,
-                   (SELECT SUM(quantity_ordered) FROM order_items WHERE order_id = o.id) AS total_quantity
+            SELECT o.*, s.name AS supplier_name, c.name AS destination_country, c.flag
             FROM orders o
             JOIN suppliers s ON o.supplier_id = s.id
+            JOIN countries c ON o.country_id = c.id
             WHERE 1=1
         ";
 
@@ -240,9 +309,14 @@ class Order {
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return $stmt->fetchAll();
     }
 
-
+    public static function updateStatus($id, $newStatus) {
+        global $pdo;
+        $stmt = $pdo->prepare("UPDATE orders SET status = ? WHERE id = ?");
+        return $stmt->execute([$newStatus, $id]);
+    }
 
 }

@@ -183,6 +183,20 @@ public static function getTotalSentForItem($orderItemId) {
     return $row['total_sent'] ?? 0;
 }
 
+public static function allWithOrderAndSupplier() {
+    global $pdo;
+    $stmt = $pdo->query("
+        SELECT s.*, o.order_date, c.name AS destination_country, c.flag AS country_flag, sup.name AS supplier_name
+        FROM shipments s
+        JOIN orders o ON s.order_id = o.id
+        JOIN suppliers sup ON o.supplier_id = sup.id
+        JOIN countries c ON o.country_id = c.id
+        ORDER BY s.shipment_date DESC
+    ");
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+
 
 
 

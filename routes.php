@@ -1,4 +1,12 @@
 <?php
+
+require_once __DIR__ . '/config/db.php'; // à adapter selon ton chemin réel
+
+// Initialiser la connexion PDO
+$pdo = Database::getInstance();
+
+
+
 $route = $_GET['route'] ?? '';
 
 // 📦 Importation des contrôleurs
@@ -8,6 +16,8 @@ require_once 'controllers/SupplierController.php';
 require_once 'controllers/OrderController.php';
 require_once 'controllers/PaymentController.php';
 require_once 'controllers/ShipmentController.php';
+require_once 'controllers/StockController.php'; 
+require_once 'controllers/ClientSaleController.php';
 
 
 // ✅ Route spéciale "show order" (car hors structure REST classique)
@@ -123,9 +133,20 @@ switch ($route) {
     case 'orders/store':
         storeOrder();
         break;
+    case (preg_match('#^orders/edit/(\d+)$#', $route, $m) ? true : false):
+        showEditOrderForm($m[1]);
+        break;
+
+    case (preg_match('#^orders/update/(\d+)$#', $route, $m) ? true : false):
+        updateOrder($m[1]);
+        break;
     case (preg_match('#^orders/delete/(\d+)$#', $route, $m) ? true : false):
         deleteOrder($m[1]);
         break;
+    case (preg_match('#^orders/update-status/(\d+)$#', $route, $m) ? true : false):
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') updateOrderStatus($m[1]);
+        break;
+
 
 
     // ----------------------
@@ -149,6 +170,43 @@ switch ($route) {
     case (preg_match('#^shipments/update_status/(\d+)$#', $route, $m) ? true : false):
         updateShipmentStatus($m[1]);
         break;
+
+
+    // ----------------------
+    // 🏷️ Stocks
+    // ----------------------
+
+    case 'stocks':
+        listRealStocks();
+        break;
+    case 'stocks/adjust':
+        adjustStock();
+        break;
+
+
+    // ----------------------
+    // 🧾 Ventes Client
+    // ----------------------
+
+    case 'client_sales':
+        listClientSales();
+        break;
+
+    case 'client_sales/create':
+        $countryId = $_GET['country_id'] ?? null;
+        createClientSale($countryId);
+        break;
+
+    case 'client_sales/store':
+        storeClientSale();
+        break;
+    case (preg_match('#^client_sales/show/(\d+)$#', $route, $m) ? true : false):
+        showClientSale($m[1]);
+        break;
+    case 'select_country':
+        showCountrySelectionForm();
+        break;
+
 
 
     // ----------------------

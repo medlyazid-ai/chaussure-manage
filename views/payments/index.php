@@ -77,10 +77,34 @@ include 'views/layout/header.php';
                             <?php endif; ?>
                         </td>
                         <td>
-                            <form method="POST" action="?route=payments/delete/<?= $p['id'] ?>" onsubmit="return confirm('Confirmer la suppression ?')">
-                                <button class="btn btn-sm btn-danger">🗑️ Supprimer</button>
-                            </form>
+                            <!-- Bouton de déclenchement -->
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalDeletePayment<?= $p['id'] ?>">
+                                🗑️ Supprimer
+                            </button>
+
                         </td>
+
+                        <!-- Modal de suppression -->
+                        <div class="modal fade" id="modalDeletePayment<?= $p['id'] ?>" tabindex="-1" aria-labelledby="modalLabel<?= $p['id'] ?>" aria-hidden="true">
+                          <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                              <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title" id="modalLabel<?= $p['id'] ?>">Supprimer le paiement #<?= $p['id'] ?></h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                              </div>
+                              <div class="modal-body">
+                                Supprimer le paiement <strong>#<?= $p['id'] ?></strong> effectué le <strong><?= date('d/m/Y', strtotime($p['payment_date'])) ?></strong> ?
+                              </div>
+                              <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                <form method="POST" action="?route=payments/delete/<?= $p['id'] ?>">
+                                    <button type="submit" class="btn btn-danger">Oui, supprimer</button>
+                                </form>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
                     </tr>
                 <?php endforeach ?>
             </tbody>

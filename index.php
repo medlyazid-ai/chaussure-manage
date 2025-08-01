@@ -1,6 +1,8 @@
 <?php
 session_start();
-require 'db.php';
+require 'config/db.php';
+
+$pdo = Database::getInstance(); // ← instanciation nécessaire pour tous les modèles
 
 // Redirection intelligente si pas de route définie
 if (!isset($_GET['route']) || $_GET['route'] === '') {
