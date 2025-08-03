@@ -1,17 +1,21 @@
 <?php
+
 require_once 'models/Product.php';
 require_once 'models/Variant.php';
 
-function listProducts() {
+function listProducts()
+{
     $products = Product::allWithVariants();
     include 'views/products/index.php';
 }
 
-function showCreateForm() {
+function showCreateForm()
+{
     include 'views/products/create.php';
 }
 
-function storeProduct() {
+function storeProduct()
+{
     $data = $_POST;
     $data['variants'] = isset($_POST['variants']) ? $_POST['variants'] : [];
     Product::create($data, $_FILES);
@@ -19,18 +23,21 @@ function storeProduct() {
 }
 
 
-function showEditForm($id) {
+function showEditForm($id)
+{
     $product = Product::find($id);
     $variants = Variant::findByProduct($id);
     include 'views/products/edit.php';
 }
 
-function updateProduct($id) {
+function updateProduct($id)
+{
     Product::update($id, $_POST, $_POST['variants']);
     header('Location: ?route=products');
 }
 
-function deleteProduct($id) {
+function deleteProduct($id)
+{
     try {
         Product::delete($id);
         header('Location: ?route=products');
@@ -41,4 +48,3 @@ function deleteProduct($id) {
         include 'views/products/index.php';
     }
 }
-

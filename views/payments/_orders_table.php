@@ -13,7 +13,7 @@
             <?php foreach ($orders as $order): ?>
                 <tr>
                     <td>#<?= $order['id'] ?></td>
-                    <td><?= htmlspecialchars($order['destination_country']) ?></td>
+                    <td><?= htmlspecialchars($order['destination_country'] ?? 'Inconnu') ?></td>
                     <td><?= number_format($order['total_amount'], 2) ?> DH</td>
                     <td><?= number_format($order['already_paid'], 2) ?> DH</td>
                     <td>

@@ -55,6 +55,7 @@ include 'views/layout/header.php';
             <thead class="table-light">
                 <tr>
                     <th>ID</th>
+                    <th>Image</th>
                     <th>Fournisseur</th>
                     <th>Pays</th>
                     <th>Quantité</th>
@@ -72,31 +73,31 @@ include 'views/layout/header.php';
                         "Côte d'Ivoire" => "🇨🇮",
                         "Mali" => "🇲🇱"
                     ];
-                ?>
+    ?>
                 <?php
-                    $totalAll = 0;
-                    $totalPaidAll = 0;
-                    $totalQtyAll = 0;
-                    ?>
+        $totalAll = 0;
+    $totalPaidAll = 0;
+    $totalQtyAll = 0;
+    ?>
 
                     <?php foreach ($orders as $order): ?>
                         <?php
-                            $total = Order::getTotalAmount($order['id']);
-                            $paid = Payment::totalAllocatedToOrder($order['id']);
-                            $totalAll += $total;
-                            $totalPaidAll += $paid;
-                            $totalQtyAll += $order['total_quantity'];
+            $total = Order::getTotalAmount($order['id']);
+                        $paid = Payment::totalAllocatedToOrder($order['id']);
+                        $totalAll += $total;
+                        $totalPaidAll += $paid;
+                        $totalQtyAll += $order['total_quantity'];
 
-                            $flag = $flags[$order['destination_country']] ?? '';
-                            $badge = match ($order['status']) {
-                                'Initial' => 'secondary',
-                                'Validé et en cours de production' => 'warning',
-                                'Envoi partiel' => 'info',
-                                'Envoi complet' => 'primary',
-                                'Livré à la destination' => 'success',
-                                default => 'dark'
-                            };
-                            $variants = Order::orderItems($order['id']);
+                        $flag = $flags[$order['destination_country']] ?? '';
+                        $badge = match ($order['status']) {
+                            'Initial' => 'secondary',
+                            'Validé et en cours de production' => 'warning',
+                            'Envoi partiel' => 'info',
+                            'Envoi complet' => 'primary',
+                            'Livré à la destination' => 'success',
+                            default => 'dark'
+                        };
+                        $variants = Order::orderItems($order['id']);
                         ?>
 
                     <?php
@@ -112,9 +113,16 @@ include 'views/layout/header.php';
                             default => 'dark'
                         };
                         $variants = Order::orderItems($order['id']);
-                    ?>
+                        ?>
                     <tr>
                         <td>#<?= $order['id'] ?></td>
+                        <td>
+                            <?php if (!empty($order['image_path'])): ?>
+                                <img src="<?= htmlspecialchars($order['image_path']) ?>" alt="Produit" width="100" height="100" class="img-thumbnail">
+                            <?php else: ?>
+                                <span class="text-muted">Aucune image</span>
+                            <?php endif; ?>
+                        </td>
                         <td><?= htmlspecialchars($order['supplier_name']) ?></td>
                         <td><?= $flag . ' ' . htmlspecialchars($order['destination_country']) ?></td>
                         <td><?= $order['total_quantity'] ?></td>

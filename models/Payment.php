@@ -1,18 +1,24 @@
 <?php
+
 // models/Payment.php
-class Payment {
-    public static function all() {
+class Payment
+{
+    public static function all()
+    {
         global $pdo;
         $stmt = $pdo->query("SELECT payments.*, suppliers.name AS supplier_name FROM payments JOIN suppliers ON payments.supplier_id = suppliers.id ORDER BY payment_date DESC");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function create($data, $file, $allocations = []) {
+    public static function create($data, $file, $allocations = [])
+    {
         global $pdo;
 
         // 📁 Enregistrement du fichier preuve
         $uploadDir = "uploads/payments/" . $data['supplier_id'];
-        if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
 
         $proofPath = null;
         if (!empty($file['proof']) && $file['proof']['error'] === UPLOAD_ERR_OK) {
@@ -97,7 +103,9 @@ class Payment {
                     $remainingAmount -= $allocate;
                 }
 
-                if ($remainingAmount <= 0) break;
+                if ($remainingAmount <= 0) {
+                    break;
+                }
             }
 
             // 🔄 Mise à jour du montant réel du paiement
@@ -109,40 +117,47 @@ class Payment {
 
 
 
-    public static function delete($id) {
+    public static function delete($id)
+    {
         global $pdo;
         $pdo->prepare("DELETE FROM payment_allocations WHERE payment_id = ?")->execute([$id]);
         $stmt = $pdo->prepare("DELETE FROM payments WHERE id = ?");
         return $stmt->execute([$id]);
     }
 
-    public static function findBySupplier($supplierId) {
+    public static function findBySupplier($supplierId)
+    {
         global $pdo;
         $stmt = $pdo->prepare("SELECT * FROM payments WHERE supplier_id = ? ORDER BY payment_date DESC");
         $stmt->execute([$supplierId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function allocationsByPayment($paymentId) {
+    public static function allocationsByPayment($paymentId)
+    {
         global $pdo;
         $stmt = $pdo->prepare("
-            SELECT pa.*, o.destination_country 
+            SELECT pa.*, c.name AS destination_country
             FROM payment_allocations pa 
             JOIN orders o ON pa.order_id = o.id 
+            JOIN countries c ON o.country_id = c.id
             WHERE pa.payment_id = ?
         ");
         $stmt->execute([$paymentId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function totalAllocatedToOrder($orderId) {
+
+    public static function totalAllocatedToOrder($orderId)
+    {
         global $pdo;
         $stmt = $pdo->prepare("SELECT SUM(amount_allocated) FROM payment_allocations WHERE order_id = ?");
         $stmt->execute([$orderId]);
         return $stmt->fetchColumn() ?: 0;
     }
 
-    public static function getRemainingAmount($orderId) {
+    public static function getRemainingAmount($orderId)
+    {
         global $pdo;
         $stmt = $pdo->prepare("SELECT price_validated FROM orders WHERE id = ?");
         $stmt->execute([$orderId]);

@@ -27,24 +27,24 @@ include 'views/layout/header.php';
             <tbody>
                 <?php
                 $grandTotal = 0;
-                $grandPaid = 0;
-                $grandRemaining = 0;
-                foreach ($orders as $order): 
-                    // Calcul montant total par commande
-                    $orderItems = Order::orderItems($order['id']);
-                    $total = 0;
-                    foreach ($orderItems as $item) {
-                        $total += $item['unit_price'] * $item['quantity_ordered'];
-                    }
+$grandPaid = 0;
+$grandRemaining = 0;
+foreach ($orders as $order):
+    // Calcul montant total par commande
+    $orderItems = Order::orderItems($order['id']);
+    $total = 0;
+    foreach ($orderItems as $item) {
+        $total += $item['unit_price'] * $item['quantity_ordered'];
+    }
 
-                    $paid = Payment::totalAllocatedToOrder($order['id']);
-                    $remaining = $total - $paid;
+    $paid = Payment::totalAllocatedToOrder($order['id']);
+    $remaining = $total - $paid;
 
-                    // Cumuls
-                    $grandTotal += $total;
-                    $grandPaid += $paid;
-                    $grandRemaining += $remaining;
-                ?>
+    // Cumuls
+    $grandTotal += $total;
+    $grandPaid += $paid;
+    $grandRemaining += $remaining;
+    ?>
                 <tr>
                     <td>#<?= $order['id'] ?></td>
                     <td><?= htmlspecialchars($order['destination_country']) ?></td>
@@ -99,11 +99,11 @@ include 'views/layout/header.php';
                         <td><?= nl2br(htmlspecialchars($p['notes'])) ?></td>
                         <td>
                             <?php
-                                $allocs = Payment::allocationsByPayment($p['id']);
-                                foreach ($allocs as $a) {
-                                    echo "Commande #" . $a['order_id'] . " : " . number_format($a['amount_allocated'], 2) . " MAD<br>";
-                                }
-                            ?>
+                    $allocs = Payment::allocationsByPayment($p['id']);
+                    foreach ($allocs as $a) {
+                        echo "Commande #" . $a['order_id'] . " : " . number_format($a['amount_allocated'], 2) . " MAD<br>";
+                    }
+                    ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>

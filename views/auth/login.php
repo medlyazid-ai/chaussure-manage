@@ -1,8 +1,8 @@
 <?php
-    require_once 'utils.php';
-    start_session_if_needed();
+require_once 'utils.php';
+start_session_if_needed();
 
-    ?>
+?>
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -20,7 +20,8 @@
                         <h3 class="card-title text-center mb-4">Connexion</h3>
 
                         <?php if (isset($_SESSION['error'])): ?>
-                            <div class="alert alert-danger"><?= $_SESSION['error']; unset($_SESSION['error']); ?></div>
+                            <div class="alert alert-danger"><?= $_SESSION['error'];
+                            unset($_SESSION['error']); ?></div>
                         <?php endif; ?>
 
                         <?php if (isset($_GET['expired'])): ?>

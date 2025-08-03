@@ -34,7 +34,8 @@ include 'views/layout/header.php';
                             </div>
                         </form>
                         <?php if (isset($_SESSION['success'])): ?>
-                            <div class="alert alert-success"><?= $_SESSION['success']; unset($_SESSION['success']); ?></div>
+                            <div class="alert alert-success"><?= $_SESSION['success'];
+                            unset($_SESSION['success']); ?></div>
                         <?php endif; ?>
 
                         <div class="text-center mt-3">

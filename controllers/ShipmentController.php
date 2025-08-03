@@ -1,13 +1,16 @@
 <?php
+
 // controllers/ShipmentController.php
 
 require_once 'models/Shipment.php';
 require_once 'models/Order.php';
 require_once 'models/Payment.php';
 require_once 'models/Stock.php';
+require_once 'models/Transport.php';
 
 
-function listShipments() {
+function listShipments()
+{
     $rawShipments = Shipment::allWithOrderAndSupplier(); // ➜ On crée cette méthode dans le modèle
     $availableOrders = Order::allWithSupplier();
 
@@ -37,7 +40,8 @@ function listShipments() {
 
 
 
-function showCreateShipmentForm() {
+function showCreateShipmentForm()
+{
     if (!isset($_GET['order_id']) || empty($_GET['order_id'])) {
         echo "ID de commande manquant.";
         return;
@@ -47,6 +51,8 @@ function showCreateShipmentForm() {
     $order = Order::findWithSupplier($orderId);
     //$orderItems = Order::orderItems($orderId);
     $orderItems = Order::orderItemsWithSentQuantities($orderId);
+    $transports = Transport::all();
+
 
 
     if (!$order) {
@@ -58,7 +64,8 @@ function showCreateShipmentForm() {
 }
 
 
-function storeShipment() {
+function storeShipment()
+{
     $shipmentId = Shipment::create($_POST, $_FILES);
     if ($shipmentId) {
         header("Location: index.php?route=orders/show/" . $_POST['order_id']);
@@ -69,20 +76,23 @@ function storeShipment() {
 }
 
 
-function deleteShipment($id) {
+function deleteShipment($id)
+{
     Shipment::delete($id);
     header("Location: ?route=shipments");
 }
 
 
-function showShipment($id) {
+function showShipment($id)
+{
     $shipment = Shipment::find($id);
     $order = Order::findWithSupplier($shipment['order_id']);
     $items = Shipment::getVariants($id);
     include 'views/shipments/show.php';
 }
 
-function updateShipmentStatus($id) {
+function updateShipmentStatus($id)
+{
     global $pdo;
 
     $id = (int) $id;
@@ -137,16 +147,23 @@ function updateShipmentStatus($id) {
         // ✅ Marquer que le stock a été ajouté
         $updateStockFlag = $pdo->prepare("UPDATE shipments SET is_stock_added = 1 WHERE id = ?");
         $updateStockFlag->execute([$id]);
+
+        // ❗ STOP ici pour voir le résultat
+        exit;
     }
 
     // 🔁 Mise à jour du statut du shipment
     $stmt = $pdo->prepare("UPDATE shipments SET status = ? WHERE id = ?");
     $stmt->execute([$newStatus, $id]);
 
+    $comment = $_POST['delivery_comment'] ?? null;
+
+    if ($newStatus === 'Arrivé à destination') {
+        $stmt = $pdo->prepare("UPDATE shipments SET delivery_comment = ? WHERE id = ?");
+        $stmt->execute([$comment, $id]);
+    }
+
     $_SESSION['success'] = "Statut de l’envoi mis à jour avec succès.";
     header("Location: ?route=shipments/show/$id");
     exit;
 }
-
-
-

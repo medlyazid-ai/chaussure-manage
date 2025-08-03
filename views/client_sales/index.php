@@ -45,7 +45,36 @@
                         </td>
                         <td>
                             <a href="?route=client_sales/show/<?= $sale['id'] ?>" class="btn btn-sm btn-primary">👁️ Détails</a>
+
+                            <a href="?route=client_sales/edit/<?= $sale['id'] ?>" class="btn btn-sm btn-warning">🖊️ Modifier</a>
+
+                            <!-- Bouton suppression -->
+                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalDelete<?= $sale['id'] ?>">
+                                🗑️ Supprimer
+                            </button>
+
+                            <!-- Modal Bootstrap pour confirmer la suppression -->
+                            <div class="modal fade" id="modalDelete<?= $sale['id'] ?>" tabindex="-1" aria-labelledby="modalLabel<?= $sale['id'] ?>" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content border-danger">
+                                        <div class="modal-header bg-danger text-white">
+                                            <h5 class="modal-title" id="modalLabel<?= $sale['id'] ?>">Supprimer la facture</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            Êtes-vous sûr de vouloir supprimer la facture client <strong>#<?= $sale['id'] ?></strong> ?
+                                        </div>
+                                        <div class="modal-footer">
+                                            <form method="POST" action="?route=client_sales/delete/<?= $sale['id'] ?>">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                <button type="submit" class="btn btn-danger">Oui, supprimer</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </td>
+
                     </tr>
                 <?php endforeach; ?>
             </tbody>

@@ -1,4 +1,5 @@
-<?php 
+<?php
+
 
 // models/RealStock.php
 class RealStock

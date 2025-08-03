@@ -22,6 +22,17 @@ include 'views/layout/header.php';
         </div>
 
         <div class="mb-3">
+            <label for="transport_id" class="form-label">🚚 Transporteur</label>
+            <select name="transport_id" id="transport_id" class="form-select" required>
+                <option value="">-- Choisir un transporteur --</option>
+                <?php foreach ($transports as $t): ?>
+                    <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['name']) ?> (<?= $t['transport_type'] ?>)</option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+
+        <div class="mb-3">
             <label for="notes" class="form-label">📝 Notes (optionnel)</label>
             <textarea class="form-control" name="notes" rows="3"></textarea>
         </div>
@@ -50,7 +61,7 @@ include 'views/layout/header.php';
                     <?php foreach ($orderItems as $item): ?>
                         <?php
                             $alreadySent = $item['quantity_sent'] ?? 0;
-                            $remaining = $item['quantity_ordered'] - $alreadySent;
+                        $remaining = $item['quantity_ordered'] - $alreadySent;
                         ?>
                         <tr>
                             <td><?= htmlspecialchars($item['size']) ?></td>

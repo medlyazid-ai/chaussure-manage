@@ -39,7 +39,7 @@ include 'views/layout/header.php';
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($payments as $p): 
+                <?php foreach ($payments as $p):
                     $allocations = Payment::allocationsByPayment($p['id']);
                     $allocatedTotal = 0;
                     $destinations = [];
@@ -50,7 +50,7 @@ include 'views/layout/header.php';
                     }
 
                     $uniqueDestinations = implode(', ', array_unique($destinations));
-                ?>
+                    ?>
                     <tr>
                         <td>#<?= $p['id'] ?></td>
                         <td><strong><?= htmlspecialchars($p['supplier_name']) ?></strong></td>

@@ -1,20 +1,24 @@
 <?php
-class Order {
 
-    public static function find($id) {
+class Order
+{
+    public static function find($id)
+    {
         global $pdo;
         $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ?");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public static function all() {
+    public static function all()
+    {
         global $pdo;
         $stmt = $pdo->query("SELECT * FROM orders ORDER BY created_at DESC");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function allWithCountry() {
+    public static function allWithCountry()
+    {
         global $pdo;
 
         $stmt = $pdo->query("
@@ -28,7 +32,8 @@ class Order {
         return $stmt->fetchAll();
     }
 
-    public static function update($id, $data) {
+    public static function update($id, $data)
+    {
         global $pdo;
         $stmt = $pdo->prepare("UPDATE orders SET supplier_id = ?, country_id = ?, product_id = ? WHERE id = ?");
         return $stmt->execute([
@@ -39,13 +44,15 @@ class Order {
         ]);
     }
 
-    public static function deleteOrderItems($orderId) {
+    public static function deleteOrderItems($orderId)
+    {
         global $pdo;
         $stmt = $pdo->prepare("DELETE FROM order_items WHERE order_id = ?");
         $stmt->execute([$orderId]);
     }
 
-    public static function addOrderItem($orderId, $variant, $productId) {
+    public static function addOrderItem($orderId, $variant, $productId)
+    {
         global $pdo;
 
         // 1. Rechercher la variante existante
@@ -83,7 +90,8 @@ class Order {
     }
 
 
-    public static function create($data) {
+    public static function create($data)
+    {
         global $pdo;
 
         $variants = $data['variants'] ?? [];
@@ -132,20 +140,23 @@ class Order {
         return $orderId;
     }
 
-    public static function delete($id) {
+    public static function delete($id)
+    {
         global $pdo;
         $stmt = $pdo->prepare("DELETE FROM orders WHERE id = ?");
         return $stmt->execute([$id]);
     }
 
-    public static function items($orderId) {
+    public static function items($orderId)
+    {
         global $pdo;
         $stmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
         $stmt->execute([$orderId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function orderItems($orderId) {
+    public static function orderItems($orderId)
+    {
         global $pdo;
         $stmt = $pdo->prepare("
             SELECT oi.*, v.size, v.color
@@ -157,7 +168,8 @@ class Order {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function orderItemsWithSentQuantities($orderId) {
+    public static function orderItemsWithSentQuantities($orderId)
+    {
         global $pdo;
         $stmt = $pdo->prepare("
             SELECT 
@@ -174,14 +186,16 @@ class Order {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function partialShipments($orderId) {
+    public static function partialShipments($orderId)
+    {
         global $pdo;
         $stmt = $pdo->prepare("SELECT * FROM shipments WHERE order_id = ?");
         $stmt->execute([$orderId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function allWithSupplier() {
+    public static function allWithSupplier()
+    {
         global $pdo;
         $sql = "SELECT 
                     o.*, 
@@ -197,7 +211,8 @@ class Order {
     }
 
 
-    public static function findWithSupplier($orderId) {
+    public static function findWithSupplier($orderId)
+    {
         global $pdo;
         $stmt = $pdo->prepare("
             SELECT o.*, s.name AS supplier_name, c.name AS destination_country, c.flag
@@ -210,7 +225,8 @@ class Order {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public static function payments($orderId) {
+    public static function payments($orderId)
+    {
         global $pdo;
         $stmt = $pdo->prepare("
             SELECT p.* 
@@ -222,14 +238,21 @@ class Order {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function getUnpaidBySupplier($supplierId) {
+    public static function getUnpaidBySupplier($supplierId)
+    {
         global $pdo;
         $stmt = $pdo->prepare("
             SELECT o.*, 
+                c.name AS destination_country,
                 IFNULL(SUM(pa.amount_allocated), 0) AS already_paid,
-                (SELECT SUM(oi.unit_price * oi.quantity_ordered) FROM order_items oi WHERE oi.order_id = o.id) AS total_amount
+                (
+                    SELECT SUM(oi.unit_price * oi.quantity_ordered)
+                    FROM order_items oi
+                    WHERE oi.order_id = o.id
+                ) AS total_amount
             FROM orders o
             LEFT JOIN payment_allocations pa ON o.id = pa.order_id
+            JOIN countries c ON o.country_id = c.id
             WHERE o.supplier_id = ?
             GROUP BY o.id
             HAVING total_amount > already_paid
@@ -239,21 +262,32 @@ class Order {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function findBySupplier($supplierId) {
+
+    public static function findBySupplier($supplierId)
+    {
         global $pdo;
-        $stmt = $pdo->prepare("SELECT * FROM orders WHERE supplier_id = ? ORDER BY id DESC");
+        $stmt = $pdo->prepare("
+            SELECT o.*, c.name AS destination_country
+            FROM orders o
+            JOIN countries c ON o.country_id = c.id
+            WHERE o.supplier_id = ?
+            ORDER BY o.id DESC
+        ");
         $stmt->execute([$supplierId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function getTotalAmount($orderId) {
+
+    public static function getTotalAmount($orderId)
+    {
         global $pdo;
         $stmt = $pdo->prepare("SELECT SUM(unit_price * quantity_ordered) FROM order_items WHERE order_id = ?");
         $stmt->execute([$orderId]);
         return $stmt->fetchColumn() ?: 0;
     }
 
-    public static function filter($supplierId = null, $status = null) {
+    public static function filter($supplierId = null, $status = null)
+    {
         global $pdo;
 
         $sql = "
@@ -282,7 +316,8 @@ class Order {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function filterWithSupplier($supplierId = null, $status = null) {
+    public static function filterWithSupplier($supplierId = null, $status = null)
+    {
         global $pdo;
 
         $sql = "
@@ -313,7 +348,8 @@ class Order {
         return $stmt->fetchAll();
     }
 
-    public static function updateStatus($id, $newStatus) {
+    public static function updateStatus($id, $newStatus)
+    {
         global $pdo;
         $stmt = $pdo->prepare("UPDATE orders SET status = ? WHERE id = ?");
         return $stmt->execute([$newStatus, $id]);

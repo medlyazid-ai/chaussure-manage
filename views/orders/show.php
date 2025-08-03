@@ -8,6 +8,23 @@ include 'views/layout/header.php';
 
     <a href="?route=shipments/create&order_id=<?= $order['id'] ?>" class="btn btn-sm btn-success">➕ Créer un envoi</a>
 
+    <!-- 🖼️ Infos produit principal -->
+    <div class="row my-4">
+        <div class="col-md-4">
+            <?php if (!empty($product['image_path'])): ?>
+                <img src="<?= htmlspecialchars($product['image_path']) ?>" class="img-fluid rounded border shadow-sm" alt="Produit">
+            <?php else: ?>
+                <div class="text-muted">Aucune image disponible</div>
+            <?php endif; ?>
+        </div>
+        <div class="col-md-8">
+            <h4><?= htmlspecialchars($product['name']) ?></h4>
+            <p><strong>Catégorie :</strong> <?= htmlspecialchars($product['category']) ?></p>
+            <p><?= nl2br(htmlspecialchars($product['description'])) ?></p>
+        </div>
+    </div>
+
+    <!-- ℹ️ Infos commande -->
     <div class="card mb-4">
         <div class="card-body">
             <p><strong>Fournisseur :</strong> <?= htmlspecialchars($order['supplier_name'] ?? $order['supplier_id']) ?></p>
@@ -18,6 +35,7 @@ include 'views/layout/header.php';
         </div>
     </div>
 
+    <!-- 🧾 Produits commandés -->
     <h4>🧾 Produits commandés</h4>
     <?php if (!empty($orderItems) && is_array($orderItems)): ?>
         <ul class="list-group mb-4">
@@ -34,6 +52,7 @@ include 'views/layout/header.php';
         <p class="text-muted">Aucun produit trouvé dans cette commande.</p>
     <?php endif; ?>
 
+    <!-- 💰 Paiements -->
     <h4>💰 Paiements liés</h4>
     <?php if (empty($payments)): ?>
         <p class="text-muted">Aucun paiement enregistré.</p>
@@ -52,7 +71,7 @@ include 'views/layout/header.php';
         </ul>
     <?php endif; ?>
 
-
+    <!-- 🚚 Envois partiels -->
     <h4>🚚 Envois partiels</h4>
     <?php if (empty($partialShipments)): ?>
         <p class="text-muted">Aucun envoi partiel enregistré.</p>
@@ -72,7 +91,6 @@ include 'views/layout/header.php';
                                     <img src="<?= $shipment['receipt_path'] ?>" alt="Reçu" class="img-fluid rounded shadow-sm" style="max-height: 200px;">
                                 </a></p>
                             <?php endif; ?>
-                            <!-- Optionnel : afficher ici les variantes envoyées si besoin -->
                         </div>
                     </div>
                 </div>

@@ -1,4 +1,5 @@
 <?php
+
 // controllers/OrderController.php
 
 require_once 'models/Order.php';
@@ -6,28 +7,36 @@ require_once 'models/Product.php';
 require_once 'models/Supplier.php';
 require_once 'models/Country.php';
 
-function listOrders() {
+function listOrders()
+{
     $supplierId = $_GET['supplier_id'] ?? null;
     $status = $_GET['status'] ?? null;
 
     $orders = Order::filterWithSupplier($supplierId, $status);
     $suppliers = Supplier::all();
-    $countries = Country::all(); // Si tu veux afficher les filtres pays plus tard
+    $countries = Country::all();
+
+    // 🔁 Récupérer image_path à partir du produit lié à chaque commande
+    foreach ($orders as &$order) {
+        $product = Product::find($order['product_id']);
+        $order['image_path'] = $product['image_path'] ?? null;
+    }
 
     include 'views/orders/index.php';
 }
 
 
 
-
-function showCreateOrderForm() {
+function showCreateOrderForm()
+{
     $suppliers = Supplier::all();
     $products = Product::all();
     $countries = Country::all();
     include 'views/orders/create.php';
 }
 
-function storeOrder() {
+function storeOrder()
+{
     if (empty($_POST['supplier_id']) || empty($_POST['country_id']) || empty($_POST['product_id'])) {
         echo "Champs obligatoires manquants.";
         return;
@@ -46,22 +55,30 @@ function storeOrder() {
 }
 
 
-
-function deleteOrder($id) {
+function deleteOrder($id)
+{
     Order::delete($id);
     header("Location: ?route=orders");
 }
 
-function showOrder($id) {
-    $order = Order::findWithSupplier($id); // commande + fournisseur
-    $orderItems = Order::orderItems($id);  // variantes commandées
-    $partialShipments = Order::partialShipments($id); // envois liés
-    $payments = Order::payments($id); // paiements liés
+
+function showOrder($id)
+{
+    $order = Order::findWithSupplier($id);
+    $orderItems = Order::orderItems($id);
+    $partialShipments = Order::partialShipments($id);
+    $payments = Order::payments($id);
+
+    // ✅ Ajouter le produit lié à la commande
+    $product = Product::find($order['product_id']);
+
     include 'views/orders/show.php';
 }
 
 
-function showEditOrderForm($id) {
+
+function showEditOrderForm($id)
+{
     $order = Order::find($id);
     if (!$order) {
         echo "Commande introuvable.";
@@ -70,15 +87,15 @@ function showEditOrderForm($id) {
 
     $suppliers = Supplier::all();
     $products = Product::all();
-    $variants = Order::orderItems($id); 
+    $variants = Order::orderItems($id);
     $countries = Country::all();
 
     include 'views/orders/edit.php';
 }
 
 
-
-function updateOrder($id) {
+function updateOrder($id)
+{
     if (empty($_POST['supplier_id']) || empty($_POST['country_id']) || empty($_POST['product_id'])) {
         echo "Champs obligatoires manquants.";
         return;
@@ -112,8 +129,8 @@ function updateOrder($id) {
 }
 
 
-
-function updateOrderStatus($id) {
+function updateOrderStatus($id)
+{
     if (!isset($_POST['status'])) {
         echo "Statut manquant.";
         return;
@@ -123,5 +140,3 @@ function updateOrderStatus($id) {
     header("Location: ?route=orders");
     exit;
 }
-
-

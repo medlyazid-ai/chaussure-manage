@@ -57,6 +57,7 @@ include 'views/layout/header.php';
                                 <thead class="table-secondary">
                                     <tr>
                                         <th>#</th>
+                                        <th>Image</th>
                                         <th>Date d'envoi</th>
                                         <th>Reçu</th>
                                         <th>Actions</th>
@@ -66,8 +67,17 @@ include 'views/layout/header.php';
                                     <?php foreach ($envois as $s): ?>
                                         <?php $variants = Shipment::getVariants($s['id']); ?>
                                         <?php $total = array_sum(array_column($variants, 'quantity_sent')); ?>
+                                        <?php $productImage = Shipment::getProductImage($s['id']); ?>
                                         <tr>
                                             <td>#<?= $s['id'] ?></td>
+                                            <td>
+                                                <?php if ($productImage): ?>
+                                                    <img src="<?= htmlspecialchars($productImage) ?>" alt="Produit" style="height: 50px; border-radius: 5px;">
+                                                <?php else: ?>
+                                                    <span class="text-muted">Aucune</span>
+                                                <?php endif; ?>
+                                            </td>
+
                                             <td><?= date('d/m/Y', strtotime($s['shipment_date'])) ?></td>
                                             <td>
                                                 <?php if (!empty($s['receipt_path'])): ?>
@@ -133,7 +143,7 @@ include 'views/layout/header.php';
                                                             <?php foreach ($items as $v): ?>
                                                                 <?php
                                                                     $totalSent = Shipment::getTotalSentByOrderItem($v['order_item_id']);
-                                                                    $reste = $v['quantity_ordered'] - $totalSent;
+                                                                $reste = $v['quantity_ordered'] - $totalSent;
                                                                 ?>
                                                                 <tr>
                                                                     <td><?= htmlspecialchars($v['size']) ?></td>

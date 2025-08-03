@@ -96,6 +96,7 @@
   <a href="?route=dashboard"><i class="bi bi-house"></i> Dashboard</a>
   <a href="?route=products"><i class="bi bi-box"></i> Produits</a>
   <a href="?route=suppliers"><i class="bi bi-truck"></i> Fournisseurs</a>
+  <a href="?route=transports"><i class="bi bi-truck"></i> Transporteurs</a>
   <a href="?route=orders"><i class="bi bi-clipboard-check"></i> Commandes</a>
   <a href="?route=payments"><i class="bi bi-cash-coin"></i> Paiements</a>
   <a href="?route=shipments"><i class="bi bi-send"></i> Envois</a>

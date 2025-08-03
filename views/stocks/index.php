@@ -16,27 +16,27 @@
 
     <?php
     $grouped = [];
-    foreach ($stocks as $stock) {
-        $grouped[$stock['country_name']][] = $stock;
-    }
-    ?>
+foreach ($stocks as $stock) {
+    $grouped[$stock['country_name']][] = $stock;
+}
+?>
 
     <div class="row">
-        <?php foreach ($grouped as $country => $items): ?>
-            <div class="col-md-6 mb-4">
+        <?php foreach ($groupedStocks as $country => $data): ?>
+            <div class="col-12 col-md-6 mb-4">
                 <div class="card shadow-sm">
                     <div class="card-header bg-primary text-white d-flex align-items-center">
-                        <?php if (!empty($items[0]['flag'])): ?>
-                            <img src="uploads/flags/<?= $items[0]['flag'] ?>" alt="<?= $country ?>" style="height: 20px;" class="me-2">
+                        <?php if (!empty($data['flag'])): ?>
+                            <img src="uploads/flags/<?= $data['flag'] ?>" alt="<?= $country ?>" style="height: 20px;" class="me-2">
                         <?php endif; ?>
                         <h5 class="mb-0"><?= htmlspecialchars($country) ?></h5>
                     </div>
                     <div class="card-body p-2">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered align-middle">
+                        <?php foreach ($data['products'] as $productName => $productData): ?>
+                            <h6 class="text-muted mt-3">👟 <?= htmlspecialchars($productName) ?></h6>
+                            <table class="table table-sm table-bordered align-middle mb-4">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Produit</th>
                                         <th>Taille</th>
                                         <th>Couleur</th>
                                         <th class="text-center">Reçu</th>
@@ -47,13 +47,17 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($items as $stock): ?>
+                                    <?php foreach ($productData['variants'] as $variantKey => $stock): ?>
                                         <tr>
-                                            <td><?= htmlspecialchars($stock['product_name']) ?></td>
                                             <td><?= htmlspecialchars($stock['size']) ?></td>
                                             <td><?= htmlspecialchars($stock['color']) ?></td>
                                             <td class="text-center text-success"><?= $stock['total_received'] ?></td>
-                                            <td class="text-center text-warning"><?= $stock['manual_adjustment'] ?></td>
+                                            <td class="text-center text-warning">
+                                                <?= $stock['manual_adjustment'] ?>
+                                                <?php if (!empty($stock['adjustments'])): ?>
+                                                    <button class="btn btn-link btn-sm p-0 text-decoration-none" onclick="toggleAdjustments('adj-<?= $stock['country_id'] ?>-<?= $stock['variant_id'] ?>')">📝</button>
+                                                <?php endif; ?>
+                                            </td>
                                             <td class="text-center text-info"><?= $stock['total_sold'] ?? 0 ?></td>
                                             <td class="text-center fw-bold">
                                                 <?= $stock['current_stock'] ?>
@@ -71,15 +75,50 @@
                                                 </form>
                                             </td>
                                         </tr>
-                                    <?php endforeach; ?>
+
+                                        <?php if (!empty($stock['adjustments'])): ?>
+                                            <tr id="adj-<?= $stock['country_id'] ?>-<?= $stock['variant_id'] ?>" class="bg-light" style="display: none;">
+                                                <td colspan="7">
+                                                    <div class="p-2 border rounded bg-white">
+                                                        <h6 class="text-primary mb-2">📋 Détails des ajustements :</h6>
+                                                        <div class="list-group list-group-flush small">
+                                                            <?php foreach ($stock['adjustments'] as $adj): ?>
+                                                                <div class="list-group-item d-flex justify-content-between align-items-start flex-wrap">
+                                                                    <div class="me-2">
+                                                                        <strong><?= htmlspecialchars($adj['adjusted_quantity']) ?></strong>
+                                                                        (<?= htmlspecialchars($adj['reason']) ?>)<br>
+                                                                        <small class="text-muted"><?= date('d/m/Y H:i', strtotime($adj['created_at'])) ?></small>
+                                                                    </div>
+                                                                    <div>
+                                                                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalDeleteAdj<?= $adj['id'] ?>">🗑️</button>
+                                                                    </div>
+                                                                    <!-- Modal ici -->
+                                                                </div>
+                                                            <?php endforeach ?>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <?php endif ?>
+                                    <?php endforeach ?>
                                 </tbody>
                             </table>
-                        </div> <!-- table-responsive -->
+                        <?php endforeach ?>
                     </div>
                 </div>
             </div>
-        <?php endforeach; ?>
+        <?php endforeach ?>
+
     </div>
 </div>
+
+<script>
+function toggleAdjustments(id) {
+    const row = document.getElementById(id);
+    if (row) {
+        row.style.display = row.style.display === "none" ? "table-row" : "none";
+    }
+}
+</script>
 
 <?php include 'views/layout/footer.php'; ?>

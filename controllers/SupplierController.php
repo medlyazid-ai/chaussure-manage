@@ -1,32 +1,39 @@
 <?php
+
 require_once 'models/Supplier.php';
 
-function listSuppliers() {
+function listSuppliers()
+{
     global $error;
     $suppliers = Supplier::all();
     include 'views/suppliers/index.php';
 }
 
-function showCreateSupplierForm() {
+function showCreateSupplierForm()
+{
     include 'views/suppliers/create.php';
 }
 
-function storeSupplier() {
+function storeSupplier()
+{
     Supplier::create($_POST);
     header('Location: ?route=suppliers');
 }
 
-function showEditSupplierForm($id) {
+function showEditSupplierForm($id)
+{
     $supplier = Supplier::find($id);
     include 'views/suppliers/edit.php';
 }
 
-function updateSupplier($id) {
+function updateSupplier($id)
+{
     Supplier::update($id, $_POST);
     header('Location: ?route=suppliers');
 }
 
-function deleteSupplier($id) {
+function deleteSupplier($id)
+{
     try {
         Supplier::delete($id);
         header("Location: ?route=suppliers");
@@ -39,7 +46,8 @@ function deleteSupplier($id) {
 }
 
 
-function dashboard() {
+function dashboard()
+{
     if (empty($_GET['id'])) {
         $error = "ID fournisseur manquant.";
         include 'views/errors/404.php';

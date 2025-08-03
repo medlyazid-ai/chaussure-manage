@@ -1,7 +1,9 @@
 <?php
 
-class Country {
-    public static function all() {
+class Country
+{
+    public static function all()
+    {
         global $pdo;
         $stmt = $pdo->query("SELECT * FROM countries ORDER BY name");
         return $stmt->fetchAll();
@@ -16,4 +18,3 @@ class Country {
     }
 
 }
-

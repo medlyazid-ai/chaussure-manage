@@ -1,6 +1,9 @@
 <?php
-class Product {
-    public static function allWithVariants() {
+
+class Product
+{
+    public static function allWithVariants()
+    {
         global $pdo;
         $stmt = $pdo->query("SELECT * FROM products");
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -14,14 +17,16 @@ class Product {
         return $products;
     }
 
-    public static function find($id) {
+    public static function find($id)
+    {
         global $pdo;
         $stmt = $pdo->prepare("SELECT * FROM products WHERE id = ?");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public static function create($data, $files) {
+    public static function create($data, $files)
+    {
         global $pdo;
 
         $imagePath = null;
@@ -53,7 +58,8 @@ class Product {
     }
 
 
-    public static function update($id, $data, $variants) {
+    public static function update($id, $data, $variants)
+    {
         global $pdo;
 
         // 1. Mise à jour des infos produit
@@ -98,7 +104,8 @@ class Product {
         }
     }
 
-    public static function all() {
+    public static function all()
+    {
         global $pdo;
 
         $stmt = $pdo->query("SELECT * FROM products ORDER BY name");
@@ -107,7 +114,8 @@ class Product {
 
 
 
-    public static function delete($id) {
+    public static function delete($id)
+    {
         global $pdo;
 
         // 1. Vérifier si des variantes du produit sont utilisées dans des commandes
