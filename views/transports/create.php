@@ -22,12 +22,13 @@
             <label for="transport_type" class="form-label">🚚 Type de transport</label>
             <select name="transport_type" id="transport_type" class="form-select" required>
                 <option value="">-- Sélectionner --</option>
-                <option value="Maritime">Maritime</option>
-                <option value="Aérien">Aérien</option>
-                <option value="Routier">Routier</option>
-                <option value="Ferroviaire">Ferroviaire</option>
-                <option value="Autre">Autre</option>
+                <option value="🚢 Maritime">🚢 Maritime</option>
+                <option value="✈️ Aérien">✈️ Aérien</option>
+                <option value="🚚 Routier">🚚 Routier</option>
+                <option value="🚆 Ferroviaire">🚆 Ferroviaire</option>
+                <option value="❓ Autre">❓ Autre</option>
             </select>
+
         </div>
 
         <div class="mb-3">

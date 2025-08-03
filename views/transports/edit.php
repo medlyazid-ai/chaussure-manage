@@ -17,16 +17,26 @@
 
             <div class="mb-3">
                 <label for="transport_type" class="form-label">🚚 Type de transport</label>
+                <?php
+                $typeOptions = [
+                    '🚢 Maritime',
+                    '✈️ Aérien',
+                    '🚚 Routier',
+                    '🚆 Ferroviaire',
+                    '❓ Autre'
+                ];
+?>
+
                 <select name="transport_type" id="transport_type" class="form-select" required>
                     <option value="">-- Sélectionner --</option>
                     <?php
-                    $types = ['Maritime', 'Aérien', 'Routier', 'Ferroviaire', 'Autre'];
-foreach ($types as $type) {
-    $selected = ($transport['transport_type'] === $type) ? 'selected' : '';
-    echo "<option value=\"$type\" $selected>$type</option>";
-}
+    foreach ($typeOptions as $option) {
+        $selected = ($transport['transport_type'] === $option) ? 'selected' : '';
+        echo "<option value=\"$option\" $selected>$option</option>";
+    }
 ?>
                 </select>
+
             </div>
 
             <div class="mb-3">
