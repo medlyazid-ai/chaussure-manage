@@ -16,10 +16,9 @@ function listOrders()
     $suppliers = Supplier::all();
     $countries = Country::all();
 
-    // 🔁 Récupérer image_path à partir du produit lié à chaque commande
-    foreach ($orders as &$order) {
+    foreach ($orders as $key => $order) {
         $product = Product::find($order['product_id']);
-        $order['image_path'] = $product['image_path'] ?? null;
+        $orders[$key]['image_path'] = $product['image_path'] ?? null;
     }
 
     include 'views/orders/index.php';
