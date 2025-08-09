@@ -19,7 +19,6 @@ class Stock
             $insertStmt = $pdo->prepare("INSERT INTO country_stocks (country_id, variant_id, quantity, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())");
             $insertStmt->execute([$countryId, $variantId, $quantityToAdd]);
         }
-        var_dump("Stock ajouté ou mis à jour pour country_id=$countryId, variant_id=$variantId, quantité=$quantityToAdd");
 
     }
 

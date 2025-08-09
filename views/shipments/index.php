@@ -13,12 +13,11 @@ include 'views/layout/header.php';
                     <select name="order_id" id="order_id" class="form-select" required>
                         <option value="">-- Choisir une commande --</option>
                         <?php foreach ($availableOrders as $order): ?>
-<option value="<?= $order['id'] ?>">
-    #<?= $order['id'] ?> - <?= htmlspecialchars($order['supplier_name']) ?>
-    (<?= $order['country_flag'] . ' ' . htmlspecialchars($order['destination_country']) ?>)
-</option>
-
-
+                        <option value="<?= $order['id'] ?>">
+                            #<?= $order['id'] ?> – <?= htmlspecialchars($order['product_name']) ?> |
+                            <?= htmlspecialchars($order['supplier_name']) ?> |
+                            <?= $order['country_flag'] . ' ' . htmlspecialchars($order['destination_country']) ?>
+                        </option>
                         <?php endforeach; ?>
 
                     </select>

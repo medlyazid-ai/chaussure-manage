@@ -12,7 +12,7 @@ require_once 'models/Transport.php';
 function listShipments()
 {
     $rawShipments = Shipment::allWithOrderAndSupplier(); // ➜ On crée cette méthode dans le modèle
-    $availableOrders = Order::allWithSupplier();
+    $availableOrders = Order::withRemainingQuantities();
 
     // Structure : $shipmentsGrouped[Fournisseur][Commande] = liste d'envois
     $shipmentsGrouped = [];
@@ -66,7 +66,46 @@ function showCreateShipmentForm()
 
 function storeShipment()
 {
-    $shipmentId = Shipment::create($_POST, $_FILES);
+    // 🔁 Gérer les fichiers
+    $receiptPath = null;
+    if (isset($_FILES['receipt']) && $_FILES['receipt']['error'] === UPLOAD_ERR_OK) {
+        $receiptDir = 'uploads/receipts/';
+        if (!is_dir($receiptDir)) {
+            mkdir($receiptDir, 0777, true);
+        }
+        $fileName = uniqid() . '_' . basename($_FILES['receipt']['name']);
+        $receiptPath = $receiptDir . $fileName;
+        move_uploaded_file($_FILES['receipt']['tmp_name'], $receiptPath);
+    }
+
+    $packageImagePath = null;
+    if (isset($_FILES['package_image']) && $_FILES['package_image']['error'] === UPLOAD_ERR_OK) {
+        $imgDir = 'uploads/package_images/';
+        if (!is_dir($imgDir)) {
+            mkdir($imgDir, 0777, true);
+        }
+        $fileName = uniqid() . '_' . basename($_FILES['package_image']['name']);
+        $packageImagePath = $imgDir . $fileName;
+        move_uploaded_file($_FILES['package_image']['tmp_name'], $packageImagePath);
+    }
+
+    // 🔁 Préparer les données à envoyer au modèle
+    $data = [
+        'order_id'       => $_POST['order_id'],
+        'shipment_date'  => $_POST['shipment_date'],
+        'notes'          => $_POST['notes'] ?? null,
+        'transport_id'   => $_POST['transport_id'],
+        'receipt_path'   => $receiptPath,
+        'tracking_code'  => $_POST['tracking_code'] ?? null,
+        'package_weight' => $_POST['package_weight'] ?? null,
+        'transport_fee'  => $_POST['transport_fee'] ?? null,
+        'package_image'  => $packageImagePath,
+        'shipment_items' => $_POST['shipment_items'] ?? [],
+    ];
+
+    // 🔁 Créer l'envoi
+    $shipmentId = Shipment::create($data, $_FILES);
+
     if ($shipmentId) {
         header("Location: index.php?route=orders/show/" . $_POST['order_id']);
         exit;
@@ -74,6 +113,7 @@ function storeShipment()
         echo "❌ Erreur lors de la création de l'envoi partiel.";
     }
 }
+
 
 
 function deleteShipment($id)
@@ -94,13 +134,12 @@ function showShipment($id)
 function updateShipmentStatus($id)
 {
     global $pdo;
-
-    $id = (int) $id;
+    $id = (int)$id;
 
     // 🔍 Récupérer le shipment
     $stmt = $pdo->prepare("SELECT * FROM shipments WHERE id = ?");
     $stmt->execute([$id]);
-    $shipment = $stmt->fetch();
+    $shipment = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$shipment) {
         $_SESSION['error'] = "Envoi introuvable.";
@@ -108,12 +147,20 @@ function updateShipmentStatus($id)
         exit;
     }
 
+    // Récupérer le statut choisi
     $newStatus = $_POST['status'] ?? null;
+    $comment   = $_POST['delivery_comment'] ?? null;
 
-    // ✅ Si le statut devient "Arrivé à destination" et le stock n’a pas encore été ajouté
-    if ($newStatus === 'Arrivé à destination' && !$shipment['is_stock_added']) {
+    if (!$newStatus) {
+        $_SESSION['error'] = "Statut manquant.";
+        header("Location: ?route=shipments/update_status/$id");
+        exit;
+    }
 
-        // 🧠 Étape 1 : Récupérer le country_id via la commande liée à l'envoi
+    // ✅ Si le statut devient "Livré à destination" et le stock n’a pas encore été ajouté
+    if ($newStatus === 'Livré à destination' && (int)$shipment['is_stock_added'] === 0) {
+
+        // 1) Récupérer le pays
         $stmt = $pdo->prepare("
             SELECT o.country_id
             FROM orders o
@@ -121,15 +168,15 @@ function updateShipmentStatus($id)
             WHERE s.id = ?
         ");
         $stmt->execute([$id]);
-        $country_id = $stmt->fetchColumn();
+        $country_id = (int)$stmt->fetchColumn();
 
         if (!$country_id) {
-            $_SESSION['error'] = "❌ Impossible de récupérer le pays pour cet envoi.";
+            $_SESSION['error'] = "Impossible de récupérer le pays pour cet envoi.";
             header("Location: ?route=shipments");
             exit;
         }
 
-        // 🧠 Étape 2 : Récupérer les variantes et quantités envoyées
+        // 2) Variantes et quantités envoyées
         $itemsStmt = $pdo->prepare("
             SELECT oi.variant_id, si.quantity_sent
             FROM shipment_items si
@@ -137,33 +184,65 @@ function updateShipmentStatus($id)
             WHERE si.shipment_id = ?
         ");
         $itemsStmt->execute([$id]);
-        $items = $itemsStmt->fetchAll();
+        $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // 🧠 Étape 3 : Mettre à jour le stock pays pour chaque variante
+        // 3) Mise à jour du stock pays
         foreach ($items as $item) {
-            Stock::addOrUpdateStock($country_id, $item['variant_id'], $item['quantity_sent']);
+            Stock::addOrUpdateStock($country_id, (int)$item['variant_id'], (int)$item['quantity_sent']);
         }
 
-        // ✅ Marquer que le stock a été ajouté
-        $updateStockFlag = $pdo->prepare("UPDATE shipments SET is_stock_added = 1 WHERE id = ?");
-        $updateStockFlag->execute([$id]);
-
-        // ❗ STOP ici pour voir le résultat
-        exit;
+        // 4) Marquer que le stock a été ajouté
+        $pdo->prepare("UPDATE shipments SET is_stock_added = 1 WHERE id = ?")->execute([$id]);
     }
 
-    // 🔁 Mise à jour du statut du shipment
-    $stmt = $pdo->prepare("UPDATE shipments SET status = ? WHERE id = ?");
-    $stmt->execute([$newStatus, $id]);
+    // 🔁 Mise à jour du statut (+ éventuel commentaire)
+    $pdo->prepare("UPDATE shipments SET status = ? WHERE id = ?")->execute([$newStatus, $id]);
 
-    $comment = $_POST['delivery_comment'] ?? null;
-
-    if ($newStatus === 'Arrivé à destination') {
-        $stmt = $pdo->prepare("UPDATE shipments SET delivery_comment = ? WHERE id = ?");
-        $stmt->execute([$comment, $id]);
+    if ($newStatus === 'Livré à destination') {
+        $pdo->prepare("UPDATE shipments SET delivery_comment = ? WHERE id = ?")->execute([$comment, $id]);
     }
 
     $_SESSION['success'] = "Statut de l’envoi mis à jour avec succès.";
     header("Location: ?route=shipments/show/$id");
     exit;
+}
+
+
+function showUpdateShipmentStatusForm($id)
+{
+    global $pdo;
+    $id = (int)$id;
+
+    // Récupération du shipment + commande pour contexte
+    $stmt = $pdo->prepare("
+        SELECT 
+            s.*, 
+            o.order_date,
+            c.name AS country_name,
+            COALESCE(o.order_date, s.shipment_date) AS doc_date
+        FROM shipments s
+        JOIN orders o   ON o.id = s.order_id
+        JOIN countries c ON c.id = o.country_id
+        WHERE s.id = ?
+    ");
+
+    $stmt->execute([$id]);
+    $shipment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$shipment) {
+        $_SESSION['error'] = "Envoi introuvable.";
+        header("Location: ?route=shipments");
+        exit;
+    }
+
+    // Liste des statuts proposés (standardise ici)
+    $availableStatuses = [
+        'En attente de confirmation',
+        'Validé et en cours de production',
+        'Envoi partiel',
+        'Envoi complet',
+        'Livré à destination' // ✅ cohérent avec ta vue SQL
+    ];
+
+    include 'views/shipments/update_status.php';
 }

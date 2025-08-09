@@ -31,4 +31,20 @@ class RealStock
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+
+    public static function getByCountry($countryId)
+    {
+        global $pdo;
+        $stmt = $pdo->prepare("
+        SELECT rs.*, c.name AS country_name, c.flag
+        FROM real_stock_view rs
+        JOIN countries c ON c.id = rs.country_id
+        WHERE rs.country_id = ?
+        ORDER BY product_name, size, color
+    ");
+        $stmt->execute([$countryId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+
 }

@@ -93,6 +93,37 @@ $statusColorClass = [
                 </div>
             <?php endif; ?>
 
+            <?php if (!empty($shipment['tracking_code']) || !empty($shipment['package_weight']) || !empty($shipment['transport_fee']) || !empty($shipment['package_image'])): ?>
+                <h5 class="mt-4">📦 Informations colis</h5>
+                <ul class="list-group mb-3">
+                    <?php if (!empty($shipment['tracking_code'])): ?>
+                        <li class="list-group-item">
+                            <strong>🔖 Code colis :</strong> <?= htmlspecialchars($shipment['tracking_code']) ?>
+                        </li>
+                    <?php endif; ?>
+
+                    <?php if (!empty($shipment['package_weight'])): ?>
+                        <li class="list-group-item">
+                            <strong>⚖️ Poids :</strong> <?= htmlspecialchars($shipment['package_weight']) ?> kg
+                        </li>
+                    <?php endif; ?>
+
+                    <?php if (!empty($shipment['transport_fee'])): ?>
+                        <li class="list-group-item">
+                            <strong>💰 Frais de transport :</strong> <?= htmlspecialchars($shipment['transport_fee']) ?> Dhs
+                        </li>
+                    <?php endif; ?>
+
+                    <?php if (!empty($shipment['package_image'])): ?>
+                        <li class="list-group-item">
+                            <strong>📷 Image du colis :</strong><br>
+                            <img src="<?= htmlspecialchars($shipment['package_image']) ?>" alt="Colis" style="max-height: 250px; border-radius: 8px; margin-top: 8px;">
+                        </li>
+                    <?php endif; ?>
+                </ul>
+            <?php endif; ?>
+
+
 
             <form method="POST" action="?route=shipments/update_status/<?= $shipment['id'] ?>" class="mt-3" id="status-form">
                 <label for="status" class="form-label"><strong>Changer le statut :</strong></label>

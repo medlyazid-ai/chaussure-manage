@@ -18,7 +18,7 @@ include 'views/layout/header.php';
 
         <div class="mb-3">
             <label for="shipment_date" class="form-label">📅 Date d'envoi</label>
-            <input type="date" class="form-control" name="shipment_date" required>
+                <input type="date" class="form-control" name="shipment_date" value="<?= date('Y-m-d') ?>" required>
         </div>
 
         <div class="mb-3">
@@ -39,8 +39,29 @@ include 'views/layout/header.php';
 
         <div class="mb-3">
             <label for="receipt" class="form-label">🧾 Reçu (image ou PDF)</label>
-            <input type="file" class="form-control" name="receipt" accept="image/*,application/pdf" required>
+            <input type="file" class="form-control" name="receipt" accept="image/*,application/pdf" >
         </div>
+
+        <div class="mb-3">
+            <label for="tracking_code" class="form-label">🔖 Code colis (tracking)</label>
+            <input type="text" class="form-control" name="tracking_code" placeholder="Ex: TRK123456">
+        </div>
+
+        <div class="mb-3">
+            <label for="package_weight" class="form-label">⚖️ Poids du colis (kg)</label>
+            <input type="number" step="0.01" class="form-control" name="package_weight" placeholder="Ex: 2.5">
+        </div>
+
+        <div class="mb-3">
+            <label for="transport_fee" class="form-label">💰 Frais de transport (Dhs ou €)</label>
+            <input type="number" step="0.01" class="form-control" name="transport_fee" placeholder="Ex: 150.00">
+        </div>
+
+        <div class="mb-3">
+            <label for="package_image" class="form-label">📷 Image du colis</label>
+            <input type="file" class="form-control" name="package_image" accept="image/*">
+        </div>
+
 
         <h5 class="mt-4">📌 Variantes à envoyer</h5>
 

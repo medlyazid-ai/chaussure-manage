@@ -20,7 +20,7 @@ class Shipment
     {
         global $pdo;
 
-        // Gérer le reçu
+        // 📁 Gérer le reçu
         $receiptPath = null;
         if (!empty($files['receipt']['tmp_name'])) {
             $uploadDir = 'uploads/receipts/' . $data['order_id'];
@@ -35,28 +35,54 @@ class Shipment
             }
         }
 
-        // Insérer l'envoi partiel
+        // 📁 Gérer l'image du colis
+        $packageImagePath = null;
+        if (!empty($files['package_image']['tmp_name'])) {
+            $uploadDir = 'uploads/package_images/' . $data['order_id'];
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+            $fileName = time() . '_' . basename($files['package_image']['name']);
+            $targetFile = $uploadDir . '/' . $fileName;
+
+            if (move_uploaded_file($files['package_image']['tmp_name'], $targetFile)) {
+                $packageImagePath = $targetFile;
+            }
+        }
+
+        // 🧾 Préparer les autres champs (avec fallback null)
+        $trackingCode  = $data['tracking_code'] ?? null;
+        $packageWeight = !empty($data['package_weight']) ? floatval($data['package_weight']) : null;
+        $transportFee  = !empty($data['transport_fee']) ? floatval($data['transport_fee']) : null;
+
+        // 📦 Insérer l'envoi partiel
         $stmt = $pdo->prepare("
-			INSERT INTO shipments (order_id, shipment_date, notes, receipt_path, status, transport_id)
-			VALUES (?, ?, ?, ?, ?, ?)
-		");
+            INSERT INTO shipments (
+                order_id, shipment_date, notes, receipt_path, status,
+                transport_id, tracking_code, package_weight, transport_fee, package_image
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
         $stmt->execute([
             $data['order_id'],
             $data['shipment_date'],
             $data['notes'],
             $receiptPath,
             'En attente de confirmation',
-            $data['transport_id'] ?? null
+            $data['transport_id'] ?? null,
+            $trackingCode,
+            $packageWeight,
+            $transportFee,
+            $packageImagePath
         ]);
 
         $shipmentId = $pdo->lastInsertId();
 
-        // Insérer les lignes d'envoi (shipment_items)
+        // 🧾 Insérer les lignes d'envoi (shipment_items)
         if (!empty($data['shipment_items'])) {
             $stmtItem = $pdo->prepare("
-	            INSERT INTO shipment_items (shipment_id, order_item_id, quantity_sent)
-	            VALUES (?, ?, ?)
-	        ");
+                INSERT INTO shipment_items (shipment_id, order_item_id, quantity_sent)
+                VALUES (?, ?, ?)
+            ");
 
             foreach ($data['shipment_items'] as $item) {
                 $orderItemId = $item['order_item_id'];
@@ -70,6 +96,7 @@ class Shipment
 
         return $shipmentId;
     }
+
 
     public static function find($id)
     {

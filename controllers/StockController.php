@@ -9,24 +9,37 @@ function listRealStocks()
 {
     $stocks = RealStock::getAll();
 
-    $groupedStocks = [];
-
+    // 🧠 Regrouper par pays
+    $grouped = [];
     foreach ($stocks as $stock) {
-        $country = $stock['country_name'];
-        $product = $stock['product_name'];
-        $variantKey = "{$stock['size']}|{$stock['color']}";
-
-        $groupedStocks[$country]['flag'] = $stock['flag'];
-        $groupedStocks[$country]['products'][$product]['variants'][$variantKey] = $stock;
-
-        // Ajoute aussi les ajustements
-        $stock['adjustments'] = StockAdjustment::getByCountryAndVariant($stock['country_id'], $stock['variant_id']);
-        $groupedStocks[$country]['products'][$product]['variants'][$variantKey]['adjustments'] = $stock['adjustments'];
+        $cid = $stock['country_id'];
+        if (!isset($grouped[$cid])) {
+            $grouped[$cid] = [
+                'country_id' => $cid,
+                'country_name' => $stock['country_name'],
+                'country_flag' => $stock['flag'],
+                'total_received' => 0,
+                'total_sold' => 0,
+                'manual_adjustment' => 0,
+            ];
+        }
+        $grouped[$cid]['total_received'] += $stock['total_received'];
+        $grouped[$cid]['total_sold'] += $stock['total_sold'];
+        $grouped[$cid]['manual_adjustment'] += $stock['manual_adjustment'];
     }
 
-    include 'views/stocks/index.php';
+    $countryStocks = $grouped;
+    include 'views/stocks/overview.php';
 }
 
+function showCountryStock($countryId)
+{
+    $stocks = RealStock::getByCountry($countryId);
+    foreach ($stocks as &$stock) {
+        $stock['adjustments'] = StockAdjustment::getByCountryAndVariant($countryId, $stock['variant_id']);
+    }
+    include 'views/stocks/country.php';
+}
 
 function adjustStock()
 {

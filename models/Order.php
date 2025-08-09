@@ -355,4 +355,38 @@ class Order
         return $stmt->execute([$newStatus, $id]);
     }
 
+    public static function withRemainingQuantities()
+    {
+        global $pdo;
+
+        $stmt = $pdo->prepare("
+            SELECT 
+                o.id,
+                s.name AS supplier_name,
+                c.name AS destination_country,
+                c.flag AS country_flag,
+                MIN(p.name) AS product_name
+            FROM orders o
+            JOIN suppliers s ON s.id = o.supplier_id
+            JOIN countries c ON c.id = o.country_id
+            JOIN order_items oi ON oi.order_id = o.id
+            JOIN variants v ON v.id = oi.variant_id
+            JOIN products p ON p.id = v.product_id
+            LEFT JOIN (
+                SELECT si.order_item_id, SUM(si.quantity_sent) AS total_sent
+                FROM shipment_items si
+                JOIN shipments sh ON sh.id = si.shipment_id
+                WHERE sh.status != 'Annulé'
+                GROUP BY si.order_item_id
+            ) AS sent_data ON sent_data.order_item_id = oi.id
+            WHERE (sent_data.total_sent IS NULL OR sent_data.total_sent < oi.quantity_ordered)
+            GROUP BY o.id
+        ");
+
+
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+
 }
