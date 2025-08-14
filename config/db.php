@@ -1,11 +1,14 @@
 <?php
-class Database {
-    public static function getInstance() {
+
+class Database
+{
+    public static function getInstance()
+    {
         static $pdo = null;
 
         if ($pdo === null) {
             $host = '127.0.0.1';
-            $db   = 'chaussures_db';
+            $db   = 'chaussures_db_v2';
             $user = 'root';
             $pass = 'root';
             $port = 8889;

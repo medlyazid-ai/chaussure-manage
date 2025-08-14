@@ -34,12 +34,36 @@ function listRealStocks()
 
 function showCountryStock($countryId)
 {
-    $stocks = RealStock::getByCountry($countryId);
-    foreach ($stocks as &$stock) {
-        $stock['adjustments'] = StockAdjustment::getByCountryAndVariant($countryId, $stock['variant_id']);
+    // 1) Fetch rows safely
+    $rows = RealStock::getByCountry($countryId);
+    if (!is_array($rows)) {
+        $rows = [];
     }
+
+    // 2) Attach adjustments to each row
+    foreach ($rows as $i => $r) {
+        $rows[$i]['adjustments'] = StockAdjustment::getByCountryAndVariant(
+            (int)$countryId,
+            (int)$r['variant_id']
+        );
+    }
+    // Prevent PHP reference side-effects
+    unset($r);
+
+    // 3) Provide the vars your view expects
+    $stocks = array_values($rows); // numeric indexing for foreach()
+    $country = [
+        'country_id'   => (int)$countryId,
+        'country_name' => $rows[0]['country_name'] ?? '',
+        'country_flag' => $rows[0]['flag'] ?? '',
+    ];
+
+    // (Optional) quick sanity log — remove later
+    // error_log('stocks count for country '.$countryId.': '.count($stocks));
+
     include 'views/stocks/country.php';
 }
+
 
 function adjustStock()
 {
