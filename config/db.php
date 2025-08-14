@@ -7,11 +7,12 @@ class Database
         static $pdo = null;
 
         if ($pdo === null) {
+            
             $host = '127.0.0.1';
-            $db   = 'chaussures_db_v2';
-            $user = 'root';
-            $pass = 'root';
-            $port = 8889;
+            $db   = 'quwaejeq_chaussure_manage_db';
+            $user = 'quwaejeq_admin';
+            $pass = 'DJq[*:q5Ia';
+            $port = 3306;
             $charset = 'utf8mb4';
 
             $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
