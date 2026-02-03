@@ -2,6 +2,16 @@
 
 A comprehensive inventory, order, and sales management system for shoe businesses.
 
+> 📚 **New Here?** Check the [Documentation Index](DOCUMENTATION_INDEX.md) for a guided tour of all available documentation.
+
+## 🚀 Quick Links
+
+- **[Quick Start Guide](QUICK_START.md)** - Install and run the system
+- **[Business Adaptation Guide](BUSINESS_ADAPTATION_GUIDE.md)** - Customize for your business
+- **[Database Schema](DATABASE_SCHEMA.md)** - Understand the data structure
+- **[Security Guide](SECURITY_MIGRATION.md)** - Secure your installation
+- **[Customization Checklist](CUSTOMIZATION_CHECKLIST.md)** - Track your progress
+
 ## 📋 Overview
 
 This system manages the complete lifecycle of shoe inventory including:
