@@ -12,14 +12,16 @@ function storeClientSale()
 
     $saleDate = $_POST['sale_date'] ?? null;
     $countryId = $_POST['country_id'] ?? null;
+    $transportId = $_POST['transport_id'] ?? null;
     $customerName = $_POST['customer_name'] ?? '';
     $notes = $_POST['notes'] ?? '';
     $variantIds = $_POST['variant_id'] ?? [];
     $quantities = $_POST['quantity_sold'] ?? [];
 
-    if (!$saleDate || !$countryId || empty($variantIds) || empty($quantities)) {
+    if (!$saleDate || (!$countryId && !$transportId) || empty($variantIds) || empty($quantities)) {
         $_SESSION['error'] = "Tous les champs obligatoires doivent être remplis.";
-        header("Location: ?route=client_sales/create&country_id=" . $countryId);
+        $redirect = $transportId ? "transport_id=$transportId" : "country_id=$countryId";
+        header("Location: ?route=client_sales/create&$redirect");
         exit;
     }
 
@@ -41,8 +43,12 @@ function storeClientSale()
     try {
         $pdo->beginTransaction();
 
-        // ✅ Insertion de la facture
-        $saleId = ClientSale::create($saleDate, $countryId, $customerName, $notes, $proofPath);
+        // ✅ Insertion de la facture (support both transport and country)
+        if ($transportId) {
+            $saleId = ClientSale::createWithTransport($saleDate, $transportId, $customerName, $notes, $proofPath);
+        } else {
+            $saleId = ClientSale::create($saleDate, $countryId, $customerName, $notes, $proofPath);
+        }
 
         // ✅ Insertion des lignes
         for ($i = 0; $i < count($variantIds); $i++) {
@@ -59,7 +65,8 @@ function storeClientSale()
     } catch (Exception $e) {
         $pdo->rollBack();
         $_SESSION['error'] = "Erreur : " . $e->getMessage();
-        header("Location: ?route=client_sales/create&country_id=" . $countryId);
+        $redirect = $transportId ? "transport_id=$transportId" : "country_id=$countryId";
+        header("Location: ?route=client_sales/create&$redirect");
     }
 
     exit;
@@ -77,20 +84,33 @@ function listClientSales()
 
 function createClientSale($countryId = null)
 {
-    // 📍 Charger tous les pays pour le menu déroulant
+    // Support both transport and country selection
+    $transportId = $_GET['transport_id'] ?? null;
+    
+    // 📍 Charger tous les pays pour le menu déroulant (legacy)
     $countries = Country::all();
+    
+    // 📍 Charger tous les transports pour le menu déroulant
+    $transports = Transport::all();
 
-    // ⚠️ Si aucun pays sélectionné → afficher choix uniquement
-    if (!$countryId) {
-        include 'views/client_sales/select_country.php';
+    // ⚠️ Si aucun pays ni transport sélectionné → afficher choix
+    if (!$countryId && !$transportId) {
+        include 'views/client_sales/select_destination.php';
         return;
     }
 
-    // 📍 Charger uniquement les variantes en stock réel > 0 pour ce pays
-    $variants = RealStock::getAvailableVariantsByCountry($countryId);
-
-    // 🔁 Charger le pays sélectionné
-    $selectedCountry = Country::getById($countryId);
+    // 📍 Charger les variantes disponibles
+    if ($transportId) {
+        // Transport-based stock
+        $variants = RealStock::getAvailableVariantsByTransport($transportId);
+        $selectedTransport = Transport::find($transportId);
+        $selectedCountry = null;
+    } else {
+        // Legacy country-based stock
+        $variants = RealStock::getAvailableVariantsByCountry($countryId);
+        $selectedCountry = Country::getById($countryId);
+        $selectedTransport = null;
+    }
 
     include 'views/client_sales/create.php';
 }

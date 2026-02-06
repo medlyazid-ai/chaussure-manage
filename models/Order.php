@@ -22,10 +22,29 @@ class Order
         global $pdo;
 
         $stmt = $pdo->query("
-            SELECT o.*, s.name AS supplier_name, c.name AS destination_country, c.flag
+            SELECT o.*, s.name AS supplier_name, 
+                   COALESCE(t.name, c.name) AS destination_name, 
+                   COALESCE(t.transport_type, c.flag) AS destination_type
             FROM orders o
             JOIN suppliers s ON o.supplier_id = s.id
-            JOIN countries c ON o.country_id = c.id
+            LEFT JOIN transports t ON o.transport_id = t.id
+            LEFT JOIN countries c ON o.country_id = c.id
+            ORDER BY o.created_at DESC
+        ");
+
+        return $stmt->fetchAll();
+    }
+    
+    // New method for transport-based orders
+    public static function allWithTransport()
+    {
+        global $pdo;
+
+        $stmt = $pdo->query("
+            SELECT o.*, s.name AS supplier_name, t.name AS transport_name, t.transport_type
+            FROM orders o
+            JOIN suppliers s ON o.supplier_id = s.id
+            LEFT JOIN transports t ON o.transport_id = t.id
             ORDER BY o.created_at DESC
         ");
 
@@ -35,13 +54,25 @@ class Order
     public static function update($id, $data)
     {
         global $pdo;
-        $stmt = $pdo->prepare("UPDATE orders SET supplier_id = ?, country_id = ?, product_id = ? WHERE id = ?");
-        return $stmt->execute([
-            $data['supplier_id'],
-            $data['country_id'],
-            $data['product_id'],
-            $id
-        ]);
+        
+        // Support both transport_id and country_id for backward compatibility
+        if (isset($data['transport_id'])) {
+            $stmt = $pdo->prepare("UPDATE orders SET supplier_id = ?, transport_id = ?, product_id = ? WHERE id = ?");
+            return $stmt->execute([
+                $data['supplier_id'],
+                $data['transport_id'],
+                $data['product_id'],
+                $id
+            ]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE orders SET supplier_id = ?, country_id = ?, product_id = ? WHERE id = ?");
+            return $stmt->execute([
+                $data['supplier_id'],
+                $data['country_id'],
+                $data['product_id'],
+                $id
+            ]);
+        }
     }
 
     public static function deleteOrderItems($orderId)
@@ -97,14 +128,26 @@ class Order
         $variants = $data['variants'] ?? [];
         $totalQuantity = array_sum(array_column($variants, 'quantity_ordered'));
 
-        $stmt = $pdo->prepare("INSERT INTO orders (supplier_id, product_id, country_id, status, total_quantity) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([
-            $data['supplier_id'],
-            $data['product_id'],
-            $data['country_id'],
-            'Initial',
-            $totalQuantity
-        ]);
+        // Support both transport_id and country_id for backward compatibility
+        if (isset($data['transport_id'])) {
+            $stmt = $pdo->prepare("INSERT INTO orders (supplier_id, product_id, transport_id, status, total_quantity) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([
+                $data['supplier_id'],
+                $data['product_id'],
+                $data['transport_id'],
+                'Initial',
+                $totalQuantity
+            ]);
+        } else {
+            $stmt = $pdo->prepare("INSERT INTO orders (supplier_id, product_id, country_id, status, total_quantity) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([
+                $data['supplier_id'],
+                $data['product_id'],
+                $data['country_id'],
+                'Initial',
+                $totalQuantity
+            ]);
+        }
 
         $orderId = $pdo->lastInsertId();
 
@@ -200,11 +243,14 @@ class Order
         $sql = "SELECT 
                     o.*, 
                     s.name AS supplier_name,
-                    c.name AS destination_country,
-                    c.flag AS country_flag
+                    COALESCE(t.name, c.name) AS destination_name,
+                    COALESCE(t.transport_type, c.flag) AS destination_type,
+                    t.name AS transport_name,
+                    c.name AS destination_country
                 FROM orders o
                 JOIN suppliers s ON o.supplier_id = s.id
-                JOIN countries c ON o.country_id = c.id
+                LEFT JOIN transports t ON o.transport_id = t.id
+                LEFT JOIN countries c ON o.country_id = c.id
                 ORDER BY o.created_at DESC";
         $stmt = $pdo->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -215,10 +261,16 @@ class Order
     {
         global $pdo;
         $stmt = $pdo->prepare("
-            SELECT o.*, s.name AS supplier_name, c.name AS destination_country, c.flag
+            SELECT o.*, s.name AS supplier_name, 
+                   COALESCE(t.name, c.name) AS destination_name,
+                   COALESCE(t.transport_type, c.flag) AS destination_type,
+                   t.name AS transport_name,
+                   c.name AS destination_country,
+                   c.flag
             FROM orders o
             JOIN suppliers s ON o.supplier_id = s.id
-            JOIN countries c ON o.country_id = c.id
+            LEFT JOIN transports t ON o.transport_id = t.id
+            LEFT JOIN countries c ON o.country_id = c.id
             WHERE o.id = ?
         ");
         $stmt->execute([$orderId]);
@@ -243,6 +295,8 @@ class Order
         global $pdo;
         $stmt = $pdo->prepare("
             SELECT o.*, 
+                COALESCE(t.name, c.name) AS destination_name,
+                t.name AS transport_name,
                 c.name AS destination_country,
                 IFNULL(SUM(pa.amount_allocated), 0) AS already_paid,
                 (
@@ -252,7 +306,8 @@ class Order
                 ) AS total_amount
             FROM orders o
             LEFT JOIN payment_allocations pa ON o.id = pa.order_id
-            JOIN countries c ON o.country_id = c.id
+            LEFT JOIN transports t ON o.transport_id = t.id
+            LEFT JOIN countries c ON o.country_id = c.id
             WHERE o.supplier_id = ?
             GROUP BY o.id
             HAVING total_amount > already_paid
@@ -267,9 +322,13 @@ class Order
     {
         global $pdo;
         $stmt = $pdo->prepare("
-            SELECT o.*, c.name AS destination_country
+            SELECT o.*, 
+                   COALESCE(t.name, c.name) AS destination_name,
+                   t.name AS transport_name,
+                   c.name AS destination_country
             FROM orders o
-            JOIN countries c ON o.country_id = c.id
+            LEFT JOIN transports t ON o.transport_id = t.id
+            LEFT JOIN countries c ON o.country_id = c.id
             WHERE o.supplier_id = ?
             ORDER BY o.id DESC
         ");
@@ -321,10 +380,16 @@ class Order
         global $pdo;
 
         $sql = "
-            SELECT o.*, s.name AS supplier_name, c.name AS destination_country, c.flag
+            SELECT o.*, s.name AS supplier_name, 
+                   COALESCE(t.name, c.name) AS destination_name,
+                   COALESCE(t.transport_type, c.flag) AS destination_type,
+                   t.name AS transport_name,
+                   c.name AS destination_country,
+                   c.flag
             FROM orders o
             JOIN suppliers s ON o.supplier_id = s.id
-            JOIN countries c ON o.country_id = c.id
+            LEFT JOIN transports t ON o.transport_id = t.id
+            LEFT JOIN countries c ON o.country_id = c.id
             WHERE 1=1
         ";
 
@@ -363,12 +428,16 @@ class Order
             SELECT 
                 o.id,
                 s.name AS supplier_name,
+                COALESCE(t.name, c.name) AS destination_name,
+                COALESCE(t.transport_type, c.flag) AS destination_type,
+                t.name AS transport_name,
                 c.name AS destination_country,
                 c.flag AS country_flag,
                 MIN(p.name) AS product_name
             FROM orders o
             JOIN suppliers s ON s.id = o.supplier_id
-            JOIN countries c ON c.id = o.country_id
+            LEFT JOIN transports t ON t.id = o.transport_id
+            LEFT JOIN countries c ON c.id = o.country_id
             JOIN order_items oi ON oi.order_id = o.id
             JOIN variants v ON v.id = oi.variant_id
             JOIN products p ON p.id = v.product_id

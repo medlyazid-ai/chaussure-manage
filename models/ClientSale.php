@@ -13,13 +13,31 @@ class ClientSale
         return $pdo->lastInsertId();
     }
 
+    // New method for transport-based sales
+    public static function createWithTransport($saleDate, $transportId, $customerName, $notes, $proofPath)
+    {
+        global $pdo;
+        $stmt = $pdo->prepare("
+            INSERT INTO client_sales (sale_date, transport_id, customer_name, notes, proof_file)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        $stmt->execute([$saleDate, $transportId, $customerName, $notes, $proofPath]);
+        return $pdo->lastInsertId();
+    }
+
     public static function getAllWithCountry()
     {
         global $pdo;
         $stmt = $pdo->query("
-	        SELECT cs.*, c.name AS country_name, c.flag
+	        SELECT cs.*, 
+	               COALESCE(t.name, c.name) AS destination_name,
+	               COALESCE(t.transport_type, c.flag) AS destination_type,
+	               c.name AS country_name, 
+	               c.flag,
+	               t.name AS transport_name
 	        FROM client_sales cs
-	        JOIN countries c ON cs.country_id = c.id
+	        LEFT JOIN countries c ON cs.country_id = c.id
+	        LEFT JOIN transports t ON cs.transport_id = t.id
 	        ORDER BY cs.sale_date DESC, cs.id DESC
 	    ");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -29,9 +47,15 @@ class ClientSale
     {
         global $pdo;
         $stmt = $pdo->prepare("
-	        SELECT cs.*, c.name AS country_name, c.flag
+	        SELECT cs.*, 
+	               COALESCE(t.name, c.name) AS destination_name,
+	               COALESCE(t.transport_type, c.flag) AS destination_type,
+	               c.name AS country_name, 
+	               c.flag,
+	               t.name AS transport_name
 	        FROM client_sales cs
-	        JOIN countries c ON cs.country_id = c.id
+	        LEFT JOIN countries c ON cs.country_id = c.id
+	        LEFT JOIN transports t ON cs.transport_id = t.id
 	        WHERE cs.id = ?
 	    ");
         $stmt->execute([$id]);
