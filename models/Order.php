@@ -21,17 +21,33 @@ class Order
     {
         global $pdo;
 
-        $stmt = $pdo->query("
-            SELECT o.*, s.name AS supplier_name, 
-                   COALESCE(t.name, c.name) AS destination_name, 
-                   COALESCE(t.transport_type, c.flag) AS destination_type
-            FROM orders o
-            JOIN suppliers s ON o.supplier_id = s.id
-            LEFT JOIN transports t ON o.transport_id = t.id
-            LEFT JOIN countries c ON o.country_id = c.id
-            ORDER BY o.created_at DESC
-        ");
+        // Build query conditionally based on column existence
+        $hasTransport = self::hasTransportColumn();
+        
+        if ($hasTransport) {
+            $sql = "
+                SELECT o.*, s.name AS supplier_name, 
+                       COALESCE(t.name, c.name) AS destination_name, 
+                       COALESCE(t.transport_type, c.flag) AS destination_type
+                FROM orders o
+                JOIN suppliers s ON o.supplier_id = s.id
+                LEFT JOIN transports t ON o.transport_id = t.id
+                LEFT JOIN countries c ON o.country_id = c.id
+                ORDER BY o.created_at DESC
+            ";
+        } else {
+            $sql = "
+                SELECT o.*, s.name AS supplier_name, 
+                       c.name AS destination_country, 
+                       c.flag
+                FROM orders o
+                JOIN suppliers s ON o.supplier_id = s.id
+                JOIN countries c ON o.country_id = c.id
+                ORDER BY o.created_at DESC
+            ";
+        }
 
+        $stmt = $pdo->query($sql);
         return $stmt->fetchAll();
     }
     
@@ -39,6 +55,11 @@ class Order
     public static function allWithTransport()
     {
         global $pdo;
+
+        // Only works if transport_id column exists
+        if (!self::hasTransportColumn()) {
+            return self::allWithCountry();
+        }
 
         $stmt = $pdo->query("
             SELECT o.*, s.name AS supplier_name, t.name AS transport_name, t.transport_type
@@ -240,18 +261,35 @@ class Order
     public static function allWithSupplier()
     {
         global $pdo;
-        $sql = "SELECT 
-                    o.*, 
-                    s.name AS supplier_name,
-                    COALESCE(t.name, c.name) AS destination_name,
-                    COALESCE(t.transport_type, c.flag) AS destination_type,
-                    t.name AS transport_name,
-                    c.name AS destination_country
-                FROM orders o
-                JOIN suppliers s ON o.supplier_id = s.id
-                LEFT JOIN transports t ON o.transport_id = t.id
-                LEFT JOIN countries c ON o.country_id = c.id
-                ORDER BY o.created_at DESC";
+        
+        // Build query conditionally based on column existence
+        $hasTransport = self::hasTransportColumn();
+        
+        if ($hasTransport) {
+            $sql = "SELECT 
+                        o.*, 
+                        s.name AS supplier_name,
+                        COALESCE(t.name, c.name) AS destination_name,
+                        COALESCE(t.transport_type, c.flag) AS destination_type,
+                        t.name AS transport_name,
+                        c.name AS destination_country
+                    FROM orders o
+                    JOIN suppliers s ON o.supplier_id = s.id
+                    LEFT JOIN transports t ON o.transport_id = t.id
+                    LEFT JOIN countries c ON o.country_id = c.id
+                    ORDER BY o.created_at DESC";
+        } else {
+            $sql = "SELECT 
+                        o.*, 
+                        s.name AS supplier_name,
+                        c.name AS destination_country,
+                        c.flag AS country_flag
+                    FROM orders o
+                    JOIN suppliers s ON o.supplier_id = s.id
+                    JOIN countries c ON o.country_id = c.id
+                    ORDER BY o.created_at DESC";
+        }
+        
         $stmt = $pdo->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -260,19 +298,37 @@ class Order
     public static function findWithSupplier($orderId)
     {
         global $pdo;
-        $stmt = $pdo->prepare("
-            SELECT o.*, s.name AS supplier_name, 
-                   COALESCE(t.name, c.name) AS destination_name,
-                   COALESCE(t.transport_type, c.flag) AS destination_type,
-                   t.name AS transport_name,
-                   c.name AS destination_country,
-                   c.flag
-            FROM orders o
-            JOIN suppliers s ON o.supplier_id = s.id
-            LEFT JOIN transports t ON o.transport_id = t.id
-            LEFT JOIN countries c ON o.country_id = c.id
-            WHERE o.id = ?
-        ");
+        
+        // Build query conditionally based on column existence
+        $hasTransport = self::hasTransportColumn();
+        
+        if ($hasTransport) {
+            $sql = "
+                SELECT o.*, s.name AS supplier_name, 
+                       COALESCE(t.name, c.name) AS destination_name,
+                       COALESCE(t.transport_type, c.flag) AS destination_type,
+                       t.name AS transport_name,
+                       c.name AS destination_country,
+                       c.flag
+                FROM orders o
+                JOIN suppliers s ON o.supplier_id = s.id
+                LEFT JOIN transports t ON o.transport_id = t.id
+                LEFT JOIN countries c ON o.country_id = c.id
+                WHERE o.id = ?
+            ";
+        } else {
+            $sql = "
+                SELECT o.*, s.name AS supplier_name, 
+                       c.name AS destination_country, 
+                       c.flag
+                FROM orders o
+                JOIN suppliers s ON o.supplier_id = s.id
+                JOIN countries c ON o.country_id = c.id
+                WHERE o.id = ?
+            ";
+        }
+        
+        $stmt = $pdo->prepare($sql);
         $stmt->execute([$orderId]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -293,26 +349,52 @@ class Order
     public static function getUnpaidBySupplier($supplierId)
     {
         global $pdo;
-        $stmt = $pdo->prepare("
-            SELECT o.*, 
-                COALESCE(t.name, c.name) AS destination_name,
-                t.name AS transport_name,
-                c.name AS destination_country,
-                IFNULL(SUM(pa.amount_allocated), 0) AS already_paid,
-                (
-                    SELECT SUM(oi.unit_price * oi.quantity_ordered)
-                    FROM order_items oi
-                    WHERE oi.order_id = o.id
-                ) AS total_amount
-            FROM orders o
-            LEFT JOIN payment_allocations pa ON o.id = pa.order_id
-            LEFT JOIN transports t ON o.transport_id = t.id
-            LEFT JOIN countries c ON o.country_id = c.id
-            WHERE o.supplier_id = ?
-            GROUP BY o.id
-            HAVING total_amount > already_paid
-            ORDER BY o.created_at DESC
-        ");
+        
+        // Build query conditionally based on column existence
+        $hasTransport = self::hasTransportColumn();
+        
+        if ($hasTransport) {
+            $sql = "
+                SELECT o.*, 
+                    COALESCE(t.name, c.name) AS destination_name,
+                    t.name AS transport_name,
+                    c.name AS destination_country,
+                    IFNULL(SUM(pa.amount_allocated), 0) AS already_paid,
+                    (
+                        SELECT SUM(oi.unit_price * oi.quantity_ordered)
+                        FROM order_items oi
+                        WHERE oi.order_id = o.id
+                    ) AS total_amount
+                FROM orders o
+                LEFT JOIN payment_allocations pa ON o.id = pa.order_id
+                LEFT JOIN transports t ON o.transport_id = t.id
+                LEFT JOIN countries c ON o.country_id = c.id
+                WHERE o.supplier_id = ?
+                GROUP BY o.id
+                HAVING total_amount > already_paid
+                ORDER BY o.created_at DESC
+            ";
+        } else {
+            $sql = "
+                SELECT o.*, 
+                    c.name AS destination_country,
+                    IFNULL(SUM(pa.amount_allocated), 0) AS already_paid,
+                    (
+                        SELECT SUM(oi.unit_price * oi.quantity_ordered)
+                        FROM order_items oi
+                        WHERE oi.order_id = o.id
+                    ) AS total_amount
+                FROM orders o
+                LEFT JOIN payment_allocations pa ON o.id = pa.order_id
+                JOIN countries c ON o.country_id = c.id
+                WHERE o.supplier_id = ?
+                GROUP BY o.id
+                HAVING total_amount > already_paid
+                ORDER BY o.created_at DESC
+            ";
+        }
+        
+        $stmt = $pdo->prepare($sql);
         $stmt->execute([$supplierId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -321,17 +403,35 @@ class Order
     public static function findBySupplier($supplierId)
     {
         global $pdo;
-        $stmt = $pdo->prepare("
-            SELECT o.*, 
-                   COALESCE(t.name, c.name) AS destination_name,
-                   t.name AS transport_name,
-                   c.name AS destination_country
-            FROM orders o
-            LEFT JOIN transports t ON o.transport_id = t.id
-            LEFT JOIN countries c ON o.country_id = c.id
-            WHERE o.supplier_id = ?
-            ORDER BY o.id DESC
-        ");
+        
+        // Build query conditionally based on column existence
+        $hasTransport = self::hasTransportColumn();
+        
+        if ($hasTransport) {
+            $sql = "
+                SELECT o.*, 
+                       COALESCE(t.name, c.name) AS destination_name,
+                       t.name AS transport_name,
+                       c.name AS destination_country
+                FROM orders o
+                LEFT JOIN transports t ON o.transport_id = t.id
+                LEFT JOIN countries c ON o.country_id = c.id
+                WHERE o.supplier_id = ?
+                ORDER BY o.id DESC
+            ";
+        } else {
+            // Fallback query without transport_id
+            $sql = "
+                SELECT o.*, 
+                       c.name AS destination_country
+                FROM orders o
+                JOIN countries c ON o.country_id = c.id
+                WHERE o.supplier_id = ?
+                ORDER BY o.id DESC
+            ";
+        }
+        
+        $stmt = $pdo->prepare($sql);
         $stmt->execute([$supplierId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -379,19 +479,35 @@ class Order
     {
         global $pdo;
 
-        $sql = "
-            SELECT o.*, s.name AS supplier_name, 
-                   COALESCE(t.name, c.name) AS destination_name,
-                   COALESCE(t.transport_type, c.flag) AS destination_type,
-                   t.name AS transport_name,
-                   c.name AS destination_country,
-                   c.flag
-            FROM orders o
-            JOIN suppliers s ON o.supplier_id = s.id
-            LEFT JOIN transports t ON o.transport_id = t.id
-            LEFT JOIN countries c ON o.country_id = c.id
-            WHERE 1=1
-        ";
+        // Build query conditionally based on column existence
+        $hasTransport = self::hasTransportColumn();
+        
+        if ($hasTransport) {
+            $sql = "
+                SELECT o.*, s.name AS supplier_name, 
+                       COALESCE(t.name, c.name) AS destination_name,
+                       COALESCE(t.transport_type, c.flag) AS destination_type,
+                       t.name AS transport_name,
+                       c.name AS destination_country,
+                       c.flag
+                FROM orders o
+                JOIN suppliers s ON o.supplier_id = s.id
+                LEFT JOIN transports t ON o.transport_id = t.id
+                LEFT JOIN countries c ON o.country_id = c.id
+                WHERE 1=1
+            ";
+        } else {
+            // Fallback query without transport_id
+            $sql = "
+                SELECT o.*, s.name AS supplier_name, 
+                       c.name AS destination_country,
+                       c.flag
+                FROM orders o
+                JOIN suppliers s ON o.supplier_id = s.id
+                JOIN countries c ON o.country_id = c.id
+                WHERE 1=1
+            ";
+        }
 
         $params = [];
 
@@ -424,38 +540,94 @@ class Order
     {
         global $pdo;
 
-        $stmt = $pdo->prepare("
-            SELECT 
-                o.id,
-                s.name AS supplier_name,
-                COALESCE(t.name, c.name) AS destination_name,
-                COALESCE(t.transport_type, c.flag) AS destination_type,
-                t.name AS transport_name,
-                c.name AS destination_country,
-                c.flag AS country_flag,
-                MIN(p.name) AS product_name
-            FROM orders o
-            JOIN suppliers s ON s.id = o.supplier_id
-            LEFT JOIN transports t ON t.id = o.transport_id
-            LEFT JOIN countries c ON c.id = o.country_id
-            JOIN order_items oi ON oi.order_id = o.id
-            JOIN variants v ON v.id = oi.variant_id
-            JOIN products p ON p.id = v.product_id
-            LEFT JOIN (
-                SELECT si.order_item_id, SUM(si.quantity_sent) AS total_sent
-                FROM shipment_items si
-                JOIN shipments sh ON sh.id = si.shipment_id
-                WHERE sh.status != 'Annulé'
-                GROUP BY si.order_item_id
-            ) AS sent_data ON sent_data.order_item_id = oi.id
-            WHERE (sent_data.total_sent IS NULL OR sent_data.total_sent < oi.quantity_ordered)
-            GROUP BY o.id
-        ");
+        // Build query conditionally based on column existence
+        $hasTransport = self::hasTransportColumn();
+        
+        if ($hasTransport) {
+            $sql = "
+                SELECT 
+                    o.id,
+                    s.name AS supplier_name,
+                    COALESCE(t.name, c.name) AS destination_name,
+                    COALESCE(t.transport_type, c.flag) AS destination_type,
+                    t.name AS transport_name,
+                    c.name AS destination_country,
+                    c.flag AS country_flag,
+                    MIN(p.name) AS product_name
+                FROM orders o
+                JOIN suppliers s ON s.id = o.supplier_id
+                LEFT JOIN transports t ON t.id = o.transport_id
+                LEFT JOIN countries c ON c.id = o.country_id
+                JOIN order_items oi ON oi.order_id = o.id
+                JOIN variants v ON v.id = oi.variant_id
+                JOIN products p ON p.id = v.product_id
+                LEFT JOIN (
+                    SELECT si.order_item_id, SUM(si.quantity_sent) AS total_sent
+                    FROM shipment_items si
+                    JOIN shipments sh ON sh.id = si.shipment_id
+                    WHERE sh.status != 'Annulé'
+                    GROUP BY si.order_item_id
+                ) AS sent_data ON sent_data.order_item_id = oi.id
+                WHERE (sent_data.total_sent IS NULL OR sent_data.total_sent < oi.quantity_ordered)
+                GROUP BY o.id
+            ";
+        } else {
+            // Fallback query without transport_id
+            $sql = "
+                SELECT 
+                    o.id,
+                    s.name AS supplier_name,
+                    c.name AS destination_country,
+                    c.flag AS country_flag,
+                    MIN(p.name) AS product_name
+                FROM orders o
+                JOIN suppliers s ON s.id = o.supplier_id
+                JOIN countries c ON c.id = o.country_id
+                JOIN order_items oi ON oi.order_id = o.id
+                JOIN variants v ON v.id = oi.variant_id
+                JOIN products p ON p.id = v.product_id
+                LEFT JOIN (
+                    SELECT si.order_item_id, SUM(si.quantity_sent) AS total_sent
+                    FROM shipment_items si
+                    JOIN shipments sh ON sh.id = si.shipment_id
+                    WHERE sh.status != 'Annulé'
+                    GROUP BY si.order_item_id
+                ) AS sent_data ON sent_data.order_item_id = oi.id
+                WHERE (sent_data.total_sent IS NULL OR sent_data.total_sent < oi.quantity_ordered)
+                GROUP BY o.id
+            ";
+        }
 
-
+        $stmt = $pdo->prepare($sql);
         $stmt->execute();
         return $stmt->fetchAll();
     }
 
+    // Helper method to check if transport_id column exists in orders table
+    private static function hasTransportColumn()
+    {
+        static $hasColumn = null;
+        
+        if ($hasColumn !== null) {
+            return $hasColumn;
+        }
+        
+        global $pdo;
+        try {
+            $stmt = $pdo->prepare("
+                SELECT COUNT(*) 
+                FROM information_schema.columns 
+                WHERE table_schema = DATABASE() 
+                AND table_name = 'orders'
+                AND column_name = 'transport_id'
+            ");
+            $stmt->execute();
+            $hasColumn = $stmt->fetchColumn() > 0;
+            return $hasColumn;
+        } catch (Exception $e) {
+            $hasColumn = false;
+            return false;
+        }
+    }
 
 }
