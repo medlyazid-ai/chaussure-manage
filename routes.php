@@ -188,6 +188,8 @@ switch ($resource) {
                 break;
             case 'country': showCountryStock($id);
                 break;
+            case 'transport': showTransportStock($id);
+                break;
             default: echo "404 - Action stock inconnue.";
                 break;
         }

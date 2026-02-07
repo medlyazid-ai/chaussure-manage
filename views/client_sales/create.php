@@ -1,12 +1,21 @@
 <?php include 'views/layout/header.php'; ?>
 
 <div class="container mt-4">
-    <h2>🧾 Nouvelle facture client - <?= htmlspecialchars($selectedCountry['name']) ?></h2>
-    <p class="text-muted">Seules les variantes disponibles en stock dans ce pays sont proposées ci-dessous.</p>
+    <?php if ($selectedTransport): ?>
+        <h2>🧾 Nouvelle facture client - 🚚 <?= htmlspecialchars($selectedTransport['name']) ?></h2>
+        <p class="text-muted">Type: <?= htmlspecialchars($selectedTransport['transport_type']) ?> - Variantes disponibles en stock pour cette société de livraison.</p>
+    <?php else: ?>
+        <h2>🧾 Nouvelle facture client - <?= htmlspecialchars($selectedCountry['name']) ?></h2>
+        <p class="text-muted">Seules les variantes disponibles en stock dans ce pays sont proposées ci-dessous.</p>
+    <?php endif; ?>
 
     <form action="?route=client_sales/store" method="POST" enctype="multipart/form-data">
 
-        <input type="hidden" name="country_id" value="<?= $selectedCountry['id'] ?>">
+        <?php if ($selectedTransport): ?>
+            <input type="hidden" name="transport_id" value="<?= $selectedTransport['id'] ?>">
+        <?php else: ?>
+            <input type="hidden" name="country_id" value="<?= $selectedCountry['id'] ?>">
+        <?php endif; ?>
 
         <div class="mb-3">
             <label for="sale_date" class="form-label">📅 Date de la vente</label>

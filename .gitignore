@@ -1,3 +1,25 @@
+# Environment configuration
+.env
+
+# Configuration files with credentials
 config/db.php
 config/config.php
+
+# User uploads
 uploads/
+
+# System files
+.DS_Store
+.php-cs-fixer.cache
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+/tmp/
+*.tmp
+*.log
