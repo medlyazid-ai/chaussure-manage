@@ -1,5 +1,6 @@
 <?php
-session_start();
+require 'utils.php';
+start_session_if_needed();
 require 'config/db.php';
 
 $pdo = Database::getInstance(); // ← instanciation nécessaire pour tous les modèles

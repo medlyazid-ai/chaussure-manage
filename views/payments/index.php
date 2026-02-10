@@ -10,9 +10,29 @@ include 'views/layout/header.php';
 
 <form method="GET" class="mb-3">
     <input type="hidden" name="route" value="payments">
-    <div class="input-group">
-        <input type="text" name="search" class="form-control" placeholder="Rechercher un fournisseur..." value="<?= isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '' ?>">
-        <button class="btn btn-outline-secondary" type="submit">🔍</button>
+    <div class="row g-2">
+        <div class="col-md-4">
+            <input type="text" name="search" class="form-control" placeholder="Rechercher un fournisseur..." value="<?= isset($_GET['search']) ? e($_GET['search']) : '' ?>">
+        </div>
+        <div class="col-md-3">
+            <select name="method" class="form-select">
+                <option value="">-- Méthode --</option>
+                <?php foreach ($methods as $m): ?>
+                    <option value="<?= e($m) ?>" <?= (isset($_GET['method']) && $_GET['method'] === $m) ? 'selected' : '' ?>>
+                        <?= e($m) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <input type="date" name="date_from" class="form-control" value="<?= isset($_GET['date_from']) ? e($_GET['date_from']) : '' ?>">
+        </div>
+        <div class="col-md-2">
+            <input type="date" name="date_to" class="form-control" value="<?= isset($_GET['date_to']) ? e($_GET['date_to']) : '' ?>">
+        </div>
+        <div class="col-md-1 d-grid">
+            <button class="btn btn-outline-secondary" type="submit">🔍</button>
+        </div>
     </div>
 </form>
 
@@ -55,7 +75,7 @@ include 'views/layout/header.php';
                         <td>#<?= $p['id'] ?></td>
                         <td><strong><?= htmlspecialchars($p['supplier_name']) ?></strong></td>
                         <td><?= date('d/m/Y', strtotime($p['payment_date'])) ?></td>
-                        <td><span class="badge bg-success"><?= number_format($p['amount'], 2) ?> MAD</span></td>
+                        <td><span class="badge bg-success"><?= number_format($p['amount'], 2) ?> <?= e($p['currency'] ?? 'MAD') ?></span></td>
                         <td><span class="badge bg-secondary"><?= htmlspecialchars($p['payment_method']) ?></span></td>
                         <td>
                             <?php if (count($allocations) > 0): ?>
@@ -66,8 +86,8 @@ include 'views/layout/header.php';
                             <?php endif; ?>
                         </td>
                         <td>
-                            <?= number_format($allocatedTotal, 2) ?> MAD
-                            <br><small class="text-muted"><?= number_format($p['amount'] - $allocatedTotal, 2) ?> MAD restant</small>
+                            <?= number_format($allocatedTotal, 2) ?> <?= e($p['currency'] ?? 'MAD') ?>
+                            <br><small class="text-muted"><?= number_format($p['amount'] - $allocatedTotal, 2) ?> <?= e($p['currency'] ?? 'MAD') ?> restant</small>
                         </td>
                         <td>
                             <?php if (!empty($p['proof_file'])): ?>
@@ -98,6 +118,7 @@ include 'views/layout/header.php';
                               <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                                 <form method="POST" action="?route=payments/delete/<?= $p['id'] ?>">
+                                    <?= csrf_field(); ?>
                                     <button type="submit" class="btn btn-danger">Oui, supprimer</button>
                                 </form>
                               </div>
@@ -110,6 +131,7 @@ include 'views/layout/header.php';
             </tbody>
         </table>
     </div>
+    <?= render_pagination($page ?? 1, $totalPages ?? 1, array_merge($_GET, ['route' => 'payments'])) ?>
 <?php endif; ?>
 
 <?php include 'views/layout/footer.php'; ?>

@@ -5,7 +5,17 @@ require_once 'models/Variant.php';
 
 function listProducts()
 {
-    $products = Product::allWithVariants();
+    $search = $_GET['search'] ?? null;
+    $category = $_GET['category'] ?? null;
+
+    $page = max(1, (int)($_GET['page'] ?? 1));
+    $perPage = 20;
+    $offset = ($page - 1) * $perPage;
+    $total = Product::countFiltered($search, $category);
+    $totalPages = (int)ceil($total / $perPage);
+
+    $products = Product::filterWithVariants($search, $category, $perPage, $offset);
+    $categories = Product::categories();
     include 'views/products/index.php';
 }
 
@@ -18,8 +28,15 @@ function storeProduct()
 {
     $data = $_POST;
     $data['variants'] = isset($_POST['variants']) ? $_POST['variants'] : [];
-    Product::create($data, $_FILES);
-    header('Location: ?route=products');
+    try {
+        Product::create($data, $_FILES);
+        header('Location: ?route=products');
+        exit;
+    } catch (Exception $e) {
+        $_SESSION['error'] = $e->getMessage();
+        header('Location: ?route=products/create');
+        exit;
+    }
 }
 
 

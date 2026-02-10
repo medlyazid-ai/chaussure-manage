@@ -58,6 +58,7 @@ include 'views/layout/header.php';
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                                     <form method="POST" action="?route=suppliers/delete/<?= $s['id'] ?>" class="d-inline">
+                                        <?= csrf_field(); ?>
                                         <button type="submit" class="btn btn-danger">Oui, supprimer</button>
                                     </form>
                                 </div>
@@ -70,5 +71,7 @@ include 'views/layout/header.php';
         </tbody>
     </table>
 </div>
+
+<?= render_pagination($page ?? 1, $totalPages ?? 1, array_merge($_GET, ['route' => 'suppliers'])) ?>
 
 <?php include 'views/layout/footer.php'; ?>

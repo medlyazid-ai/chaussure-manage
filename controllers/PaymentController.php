@@ -3,23 +3,45 @@
 require_once 'models/Payment.php';
 require_once 'models/Supplier.php';
 require_once 'models/Order.php';
+require_once 'models/Partner.php';
 
 function listPayments() {
-    $payments = Payment::all();
+    $search = $_GET['search'] ?? null;
+    $dateFrom = $_GET['date_from'] ?? null;
+    $dateTo = $_GET['date_to'] ?? null;
+    $method = $_GET['method'] ?? null;
+
+    $page = max(1, (int)($_GET['page'] ?? 1));
+    $perPage = 20;
+    $offset = ($page - 1) * $perPage;
+    $total = Payment::countFiltered($search, $dateFrom, $dateTo, $method);
+    $totalPages = (int)ceil($total / $perPage);
+
+    $payments = Payment::filter($search, $dateFrom, $dateTo, $method, $perPage, $offset);
+    $methods = Payment::methods();
     include 'views/payments/index.php';
 }
 
 function showCreatePaymentForm() {
     $suppliers = Supplier::all();
+    $partners = Partner::all();
+    $prefillSupplierId = $_GET['supplier_id'] ?? null;
+    $prefillOrderId = $_GET['order_id'] ?? null;
     include 'views/payments/create.php';
 }
 
 function storePayment() {
     $supplierId = $_POST['supplier_id'] ?? null;
+    $partnerId = $_POST['partner_id'] ?? null;
 
     if (!$supplierId) {
         $error = "Aucun fournisseur sélectionné.";
         listPayments(); // réaffiche la liste avec erreur
+        return;
+    }
+    if (!$partnerId) {
+        $error = "Aucun partenaire sélectionné.";
+        listPayments();
         return;
     }
 
@@ -65,6 +87,7 @@ function deletePayment($id) {
 function fetchOrdersBySupplier($supplierId) {
     header('Content-Type: text/html; charset=utf-8');
     $orders = Order::getUnpaidBySupplier($supplierId);
+    $prefillOrderId = $_GET['order_id'] ?? null;
     include 'views/payments/_orders_table.php';
     exit;
 }

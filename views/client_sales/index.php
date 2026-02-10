@@ -4,9 +4,42 @@
     <h2>📄 Liste des ventes client (factures)</h2>
 
     <?php if (!empty($_SESSION['success'])): ?>
-        <div class="alert alert-success"><?= $_SESSION['success'] ?></div>
+        <div class="alert alert-success"><?= e($_SESSION['success']) ?></div>
         <?php unset($_SESSION['success']); ?>
     <?php endif; ?>
+
+    <form method="GET" class="row g-2 mb-3">
+        <input type="hidden" name="route" value="client_sales">
+        <div class="col-md-4">
+            <select name="country_id" class="form-select">
+                <option value="">-- Tous les pays --</option>
+                <?php foreach ($countries as $c): ?>
+                    <option value="<?= $c['id'] ?>" <?= (isset($_GET['country_id']) && $_GET['country_id'] == $c['id']) ? 'selected' : '' ?>>
+                        <?= e($c['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select name="company_id" class="form-select">
+                <option value="">-- Toutes les sociétés --</option>
+                <?php foreach ($companies as $c): ?>
+                    <option value="<?= $c['id'] ?>" <?= (isset($_GET['company_id']) && $_GET['company_id'] == $c['id']) ? 'selected' : '' ?>>
+                        <?= e($c['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <input type="date" name="date_from" class="form-control" value="<?= isset($_GET['date_from']) ? e($_GET['date_from']) : '' ?>">
+        </div>
+        <div class="col-md-2">
+            <input type="date" name="date_to" class="form-control" value="<?= isset($_GET['date_to']) ? e($_GET['date_to']) : '' ?>">
+        </div>
+        <div class="col-md-1 d-grid">
+            <button class="btn btn-outline-secondary" type="submit">🔍</button>
+        </div>
+    </form>
 
     <?php if (empty($sales)): ?>
         <div class="alert alert-warning">Aucune vente enregistrée pour le moment.</div>
@@ -17,8 +50,12 @@
                     <th>#</th>
                     <th>Date</th>
                     <th>Pays</th>
-                    <th>Client</th>
-                    <th>Notes</th>
+                    <th>Société</th>
+                    <th>Partenaire</th>
+                    <th>Compte</th>
+                    <th>Montant</th>
+                    <th>Méthode</th>
+                    <th>Encaissement</th>
                     <th>Justificatif</th>
                     <th>Actions</th>
                 </tr>
@@ -34,8 +71,15 @@
                             <?php endif; ?>
                             <?= htmlspecialchars($sale['country_name']) ?>
                         </td>
-                        <td><?= htmlspecialchars($sale['customer_name']) ?></td>
-                        <td><?= nl2br(htmlspecialchars($sale['notes'])) ?></td>
+                        <td><?= !empty($sale['company_name']) ? e($sale['company_name']) : '<span class="text-muted">—</span>' ?></td>
+                        <td><?= !empty($sale['partner_name']) ? e($sale['partner_name']) : '<span class="text-muted">—</span>' ?></td>
+                        <td><?= !empty($sale['account_label']) ? e($sale['account_label']) : '<span class="text-muted">—</span>' ?></td>
+                        <td>
+                            <?= number_format((float)$sale['amount_received'], 2) ?>
+                            <?= !empty($sale['currency']) ? e($sale['currency']) : '' ?>
+                        </td>
+                        <td><?= !empty($sale['payment_method']) ? e($sale['payment_method']) : '<span class="text-muted">—</span>' ?></td>
+                        <td><?= !empty($sale['received_date']) ? e($sale['received_date']) : '<span class="text-muted">—</span>' ?></td>
                         <td>
                             <?php if ($sale['proof_file']): ?>
                                 <a href="<?= $sale['proof_file'] ?>" target="_blank" class="btn btn-outline-secondary btn-sm">📎 Voir</a>
@@ -66,6 +110,7 @@
                                         </div>
                                         <div class="modal-footer">
                                             <form method="POST" action="?route=client_sales/delete/<?= $sale['id'] ?>">
+                                                <?= csrf_field(); ?>
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                                                 <button type="submit" class="btn btn-danger">Oui, supprimer</button>
                                             </form>
@@ -79,6 +124,7 @@
                 <?php endforeach; ?>
             </tbody>
         </table>
+        <?= render_pagination($page ?? 1, $totalPages ?? 1, array_merge($_GET, ['route' => 'client_sales'])) ?>
     <?php endif; ?>
 </div>
 

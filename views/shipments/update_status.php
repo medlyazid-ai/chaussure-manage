@@ -22,11 +22,12 @@ if (!empty($shipment['doc_date'])) {
     </p>
 
     <?php if (!empty($_SESSION['error'])): ?>
-        <div class="alert alert-danger"><?= $_SESSION['error'];
+        <div class="alert alert-danger"><?= e($_SESSION['error']);
         unset($_SESSION['error']); ?></div>
     <?php endif; ?>
 
     <form method="POST" action="?route=shipments/update_status/<?= (int)$shipment['id'] ?>" class="mt-3">
+        <?= csrf_field(); ?>
         <div class="mb-3">
             <label class="form-label">Statut</label>
             <select name="status" class="form-select" required>

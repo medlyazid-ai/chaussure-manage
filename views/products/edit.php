@@ -7,6 +7,7 @@ include 'views/layout/header.php';
     <h2 class="mb-4">Modifier le produit</h2>
 
     <form action="?route=products/update/<?= $product['id'] ?>" method="POST">
+        <?= csrf_field(); ?>
         <div class="mb-3">
             <label class="form-label">Nom</label>
             <input name="name" value="<?= htmlspecialchars($product['name']) ?>" class="form-control" required>

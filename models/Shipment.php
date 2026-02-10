@@ -1,4 +1,5 @@
 <?php
+require_once 'utils.php';
 
 class Shipment
 {
@@ -21,32 +22,42 @@ class Shipment
         global $pdo;
 
         // 📁 Gérer le reçu
-        $receiptPath = null;
-        if (!empty($files['receipt']['tmp_name'])) {
+        $receiptPath = $data['receipt_path'] ?? null;
+        if (!$receiptPath && !empty($files['receipt']['tmp_name'])) {
+            validate_upload_or_throw(
+                $files['receipt'],
+                ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
+                5 * 1024 * 1024
+            );
             $uploadDir = 'uploads/receipts/' . $data['order_id'];
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0777, true);
-            }
-            $fileName = time() . '_' . basename($files['receipt']['name']);
+            ensure_upload_dir($uploadDir);
+            $fileName = time() . '_' . bin2hex(random_bytes(4)) . '_' . sanitize_filename($files['receipt']['name']);
             $targetFile = $uploadDir . '/' . $fileName;
 
             if (move_uploaded_file($files['receipt']['tmp_name'], $targetFile)) {
                 $receiptPath = $targetFile;
+            } else {
+                throw new Exception("Échec de l'upload du reçu.");
             }
         }
 
         // 📁 Gérer l'image du colis
-        $packageImagePath = null;
-        if (!empty($files['package_image']['tmp_name'])) {
+        $packageImagePath = $data['package_image'] ?? null;
+        if (!$packageImagePath && !empty($files['package_image']['tmp_name'])) {
+            validate_upload_or_throw(
+                $files['package_image'],
+                ['image/jpeg', 'image/png', 'image/webp'],
+                5 * 1024 * 1024
+            );
             $uploadDir = 'uploads/package_images/' . $data['order_id'];
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0777, true);
-            }
-            $fileName = time() . '_' . basename($files['package_image']['name']);
+            ensure_upload_dir($uploadDir);
+            $fileName = time() . '_' . bin2hex(random_bytes(4)) . '_' . sanitize_filename($files['package_image']['name']);
             $targetFile = $uploadDir . '/' . $fileName;
 
             if (move_uploaded_file($files['package_image']['tmp_name'], $targetFile)) {
                 $packageImagePath = $targetFile;
+            } else {
+                throw new Exception("Échec de l'upload de l'image du colis.");
             }
         }
 
@@ -234,27 +245,113 @@ class Shipment
         return $row['total_sent'] ?? 0;
     }
 
-    public static function allWithOrderAndSupplier()
+    public static function allWithOrderAndSupplier($filters = [], $limit = null, $offset = null)
     {
         global $pdo;
-        $stmt = $pdo->query("
-        SELECT 
-            s.*, 
-            o.order_date, 
-            c.name AS destination_country, 
-            c.flag AS country_flag, 
-            sup.name AS supplier_name,
-            t.name AS transport_name,
-            t.transport_type,
-            t.contact_info
-        FROM shipments s
-        JOIN orders o ON s.order_id = o.id
-        JOIN suppliers sup ON o.supplier_id = sup.id
-        JOIN countries c ON o.country_id = c.id
-        LEFT JOIN transports t ON s.transport_id = t.id
-        ORDER BY s.shipment_date DESC
-    ");
+        $sql = "
+            SELECT 
+                s.*, 
+                o.order_date,
+                o.product_id,
+                p.name AS product_name,
+                p.image_path AS product_image,
+                c.name AS destination_country, 
+                c.flag AS country_flag, 
+                sup.name AS supplier_name,
+                cc.name AS company_name,
+                t.name AS transport_name,
+                t.transport_type,
+                t.contact_info
+            FROM shipments s
+            JOIN orders o ON s.order_id = o.id
+            JOIN suppliers sup ON o.supplier_id = sup.id
+            JOIN countries c ON o.country_id = c.id
+            JOIN products p ON o.product_id = p.id
+            LEFT JOIN country_companies cc ON o.company_id = cc.id
+            LEFT JOIN transports t ON s.transport_id = t.id
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if (!empty($filters['supplier_id'])) {
+            $sql .= " AND o.supplier_id = ?";
+            $params[] = $filters['supplier_id'];
+        }
+        if (!empty($filters['product_id'])) {
+            $sql .= " AND o.product_id = ?";
+            $params[] = $filters['product_id'];
+        }
+        if (!empty($filters['country_id'])) {
+            $sql .= " AND o.country_id = ?";
+            $params[] = $filters['country_id'];
+        }
+        if (!empty($filters['company_id'])) {
+            $sql .= " AND o.company_id = ?";
+            $params[] = $filters['company_id'];
+        }
+        if (!empty($filters['date_from'])) {
+            $sql .= " AND DATE(s.shipment_date) >= ?";
+            $params[] = $filters['date_from'];
+        }
+        if (!empty($filters['date_to'])) {
+            $sql .= " AND DATE(s.shipment_date) <= ?";
+            $params[] = $filters['date_to'];
+        }
+
+        $sql .= " ORDER BY s.shipment_date DESC";
+        if ($limit !== null) {
+            $sql .= " LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+        }
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function countFiltered($filters = [])
+    {
+        global $pdo;
+        $sql = "
+            SELECT COUNT(*)
+            FROM shipments s
+            JOIN orders o ON s.order_id = o.id
+            JOIN suppliers sup ON o.supplier_id = sup.id
+            JOIN countries c ON o.country_id = c.id
+            JOIN products p ON o.product_id = p.id
+            LEFT JOIN country_companies cc ON o.company_id = cc.id
+            LEFT JOIN transports t ON s.transport_id = t.id
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if (!empty($filters['supplier_id'])) {
+            $sql .= " AND o.supplier_id = ?";
+            $params[] = $filters['supplier_id'];
+        }
+        if (!empty($filters['product_id'])) {
+            $sql .= " AND o.product_id = ?";
+            $params[] = $filters['product_id'];
+        }
+        if (!empty($filters['country_id'])) {
+            $sql .= " AND o.country_id = ?";
+            $params[] = $filters['country_id'];
+        }
+        if (!empty($filters['company_id'])) {
+            $sql .= " AND o.company_id = ?";
+            $params[] = $filters['company_id'];
+        }
+        if (!empty($filters['date_from'])) {
+            $sql .= " AND DATE(s.shipment_date) >= ?";
+            $params[] = $filters['date_from'];
+        }
+        if (!empty($filters['date_to'])) {
+            $sql .= " AND DATE(s.shipment_date) <= ?";
+            $params[] = $filters['date_to'];
+        }
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int)$stmt->fetchColumn();
     }
 
     public static function getProductImage($shipmentId)
@@ -273,6 +370,65 @@ class Shipment
         return $stmt->fetchColumn(); // retourne le chemin de l’image
     }
 
+    public static function getOrderTotals($orderId)
+    {
+        global $pdo;
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(SUM(quantity_ordered), 0) AS total_ordered
+            FROM order_items
+            WHERE order_id = ?
+        ");
+        $stmt->execute([$orderId]);
+        return (int)$stmt->fetchColumn();
+    }
+
+    public static function getOrderTotalSent($orderId)
+    {
+        global $pdo;
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(SUM(si.quantity_sent), 0) AS total_sent
+            FROM shipment_items si
+            JOIN shipments s ON s.id = si.shipment_id
+            WHERE s.order_id = ?
+        ");
+        $stmt->execute([$orderId]);
+        return (int)$stmt->fetchColumn();
+    }
+
+    public static function getOrderProgress($orderId)
+    {
+        $ordered = self::getOrderTotals($orderId);
+        $sent = self::getOrderTotalSent($orderId);
+        $remaining = max($ordered - $sent, 0);
+        $percent = $ordered > 0 ? (int)round(($sent / $ordered) * 100) : 0;
+        $status = $ordered > 0 && $remaining === 0 ? 'Livré (complet)' : ($sent > 0 ? 'Envoi partiel' : 'En attente');
+        return [
+            'ordered' => $ordered,
+            'sent' => $sent,
+            'remaining' => $remaining,
+            'percent' => $percent,
+            'status' => $status
+        ];
+    }
+
+    public static function bySupplier($supplierId)
+    {
+        global $pdo;
+        $stmt = $pdo->prepare("
+            SELECT s.*, o.id AS order_id, o.status AS order_status,
+                   p.name AS product_name, c.name AS country_name,
+                   cc.name AS company_name
+            FROM shipments s
+            JOIN orders o ON s.order_id = o.id
+            JOIN products p ON o.product_id = p.id
+            JOIN countries c ON o.country_id = c.id
+            LEFT JOIN country_companies cc ON o.company_id = cc.id
+            WHERE o.supplier_id = ?
+            ORDER BY s.shipment_date DESC
+        ");
+        $stmt->execute([$supplierId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 
 
 

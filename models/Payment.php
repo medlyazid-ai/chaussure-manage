@@ -1,4 +1,5 @@
 <?php
+require_once 'utils.php';
 
 // models/Payment.php
 class Payment
@@ -10,22 +11,110 @@ class Payment
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public static function filter($search = null, $dateFrom = null, $dateTo = null, $method = null, $limit = null, $offset = null)
+    {
+        global $pdo;
+
+        $sql = "
+            SELECT payments.*, suppliers.name AS supplier_name
+            FROM payments
+            JOIN suppliers ON payments.supplier_id = suppliers.id
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if ($search) {
+            $sql .= " AND suppliers.name LIKE ?";
+            $params[] = '%' . $search . '%';
+        }
+
+        if ($method) {
+            $sql .= " AND payments.payment_method = ?";
+            $params[] = $method;
+        }
+
+        if ($dateFrom) {
+            $sql .= " AND DATE(payments.payment_date) >= ?";
+            $params[] = $dateFrom;
+        }
+
+        if ($dateTo) {
+            $sql .= " AND DATE(payments.payment_date) <= ?";
+            $params[] = $dateTo;
+        }
+
+        $sql .= " ORDER BY payment_date DESC";
+        if ($limit !== null) {
+            $sql .= " LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+        }
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function countFiltered($search = null, $dateFrom = null, $dateTo = null, $method = null)
+    {
+        global $pdo;
+        $sql = "
+            SELECT COUNT(*)
+            FROM payments
+            JOIN suppliers ON payments.supplier_id = suppliers.id
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if ($search) {
+            $sql .= " AND suppliers.name LIKE ?";
+            $params[] = '%' . $search . '%';
+        }
+        if ($method) {
+            $sql .= " AND payments.payment_method = ?";
+            $params[] = $method;
+        }
+        if ($dateFrom) {
+            $sql .= " AND DATE(payments.payment_date) >= ?";
+            $params[] = $dateFrom;
+        }
+        if ($dateTo) {
+            $sql .= " AND DATE(payments.payment_date) <= ?";
+            $params[] = $dateTo;
+        }
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int)$stmt->fetchColumn();
+    }
+
+    public static function methods()
+    {
+        global $pdo;
+        $stmt = $pdo->query("SELECT DISTINCT payment_method FROM payments WHERE payment_method IS NOT NULL AND payment_method != '' ORDER BY payment_method");
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
     public static function create($data, $file, $allocations = [])
     {
         global $pdo;
 
         // 📁 Enregistrement du fichier preuve
         $uploadDir = "uploads/payments/" . $data['supplier_id'];
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
-        }
+        ensure_upload_dir($uploadDir);
 
         $proofPath = null;
         if (!empty($file['proof']) && $file['proof']['error'] === UPLOAD_ERR_OK) {
-            $filename = basename($file['proof']['name']);
-            $targetPath = "$uploadDir/" . time() . "_" . $filename;
-            move_uploaded_file($file['proof']['tmp_name'], $targetPath);
-            $proofPath = $targetPath;
+            validate_upload_or_throw(
+                $file['proof'],
+                ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
+                5 * 1024 * 1024
+            );
+            $filename = time() . '_' . bin2hex(random_bytes(4)) . '_' . sanitize_filename($file['proof']['name']);
+            $targetPath = "$uploadDir/" . $filename;
+            if (move_uploaded_file($file['proof']['tmp_name'], $targetPath)) {
+                $proofPath = $targetPath;
+            } else {
+                throw new Exception("Échec de l'upload du justificatif.");
+            }
         }
 
         // 💰 Calculer le vrai montant à partir des allocations
@@ -49,11 +138,13 @@ class Payment
         }
 
         // 🧾 Enregistrement du paiement
-        $stmt = $pdo->prepare("INSERT INTO payments (supplier_id, payment_date, amount, payment_method, notes, proof_file) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO payments (supplier_id, partner_id, payment_date, amount, currency, payment_method, notes, proof_file) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $data['supplier_id'],
+            $data['partner_id'],
             $data['payment_date'],
             $amount, // calculé automatiquement
+            $data['currency'] ?? 'MAD',
             $data['payment_method'],
             $data['notes'],
             $proofPath
@@ -144,6 +235,21 @@ class Payment
             WHERE pa.payment_id = ?
         ");
         $stmt->execute([$paymentId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function paymentsByOrder($orderId)
+    {
+        global $pdo;
+        $stmt = $pdo->prepare("
+            SELECT p.*, pa.amount_allocated, pr.name AS partner_name
+            FROM payment_allocations pa
+            JOIN payments p ON p.id = pa.payment_id
+            LEFT JOIN partners pr ON p.partner_id = pr.id
+            WHERE pa.order_id = ?
+            ORDER BY p.payment_date DESC
+        ");
+        $stmt->execute([$orderId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

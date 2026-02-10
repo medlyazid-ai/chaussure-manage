@@ -7,12 +7,36 @@ require_once 'models/Order.php';
 require_once 'models/Payment.php';
 require_once 'models/Stock.php';
 require_once 'models/Transport.php';
+require_once 'models/Supplier.php';
+require_once 'models/Product.php';
+require_once 'models/Country.php';
+require_once 'models/Company.php';
+require_once 'utils.php';
 
 
 function listShipments()
 {
-    $rawShipments = Shipment::allWithOrderAndSupplier(); // ➜ On crée cette méthode dans le modèle
+    $filters = [
+        'supplier_id' => $_GET['supplier_id'] ?? null,
+        'product_id' => $_GET['product_id'] ?? null,
+        'country_id' => $_GET['country_id'] ?? null,
+        'company_id' => $_GET['company_id'] ?? null,
+        'date_from' => $_GET['date_from'] ?? null,
+        'date_to' => $_GET['date_to'] ?? null,
+    ];
+
+    $page = max(1, (int)($_GET['page'] ?? 1));
+    $perPage = 20;
+    $offset = ($page - 1) * $perPage;
+    $total = Shipment::countFiltered($filters);
+    $totalPages = (int)ceil($total / $perPage);
+
+    $rawShipments = Shipment::allWithOrderAndSupplier($filters, $perPage, $offset);
     $availableOrders = Order::withRemainingQuantities();
+    $suppliers = Supplier::all();
+    $products = Product::all();
+    $countries = Country::all();
+    $companies = Company::all();
 
     // Structure : $shipmentsGrouped[Fournisseur][Commande] = liste d'envois
     $shipmentsGrouped = [];
@@ -34,6 +58,7 @@ function listShipments()
     }
 
     $shipments = $shipmentsGrouped;
+    $view = $_GET['view'] ?? 'grouped';
 
     include 'views/shipments/index.php';
 }
@@ -66,51 +91,68 @@ function showCreateShipmentForm()
 
 function storeShipment()
 {
-    // 🔁 Gérer les fichiers
-    $receiptPath = null;
-    if (isset($_FILES['receipt']) && $_FILES['receipt']['error'] === UPLOAD_ERR_OK) {
-        $receiptDir = 'uploads/receipts/';
-        if (!is_dir($receiptDir)) {
-            mkdir($receiptDir, 0777, true);
+    try {
+        // 🔁 Gérer les fichiers
+        $receiptPath = null;
+        if (isset($_FILES['receipt']) && $_FILES['receipt']['error'] === UPLOAD_ERR_OK) {
+            validate_upload_or_throw(
+                $_FILES['receipt'],
+                ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
+                5 * 1024 * 1024
+            );
+            $receiptDir = 'uploads/receipts/';
+            ensure_upload_dir($receiptDir);
+            $fileName = uniqid() . '_' . sanitize_filename($_FILES['receipt']['name']);
+            $receiptPath = $receiptDir . $fileName;
+            if (!move_uploaded_file($_FILES['receipt']['tmp_name'], $receiptPath)) {
+                throw new Exception("Échec de l'upload du reçu.");
+            }
         }
-        $fileName = uniqid() . '_' . basename($_FILES['receipt']['name']);
-        $receiptPath = $receiptDir . $fileName;
-        move_uploaded_file($_FILES['receipt']['tmp_name'], $receiptPath);
-    }
 
-    $packageImagePath = null;
-    if (isset($_FILES['package_image']) && $_FILES['package_image']['error'] === UPLOAD_ERR_OK) {
-        $imgDir = 'uploads/package_images/';
-        if (!is_dir($imgDir)) {
-            mkdir($imgDir, 0777, true);
+        $packageImagePath = null;
+        if (isset($_FILES['package_image']) && $_FILES['package_image']['error'] === UPLOAD_ERR_OK) {
+            validate_upload_or_throw(
+                $_FILES['package_image'],
+                ['image/jpeg', 'image/png', 'image/webp'],
+                5 * 1024 * 1024
+            );
+            $imgDir = 'uploads/package_images/';
+            ensure_upload_dir($imgDir);
+            $fileName = uniqid() . '_' . sanitize_filename($_FILES['package_image']['name']);
+            $packageImagePath = $imgDir . $fileName;
+            if (!move_uploaded_file($_FILES['package_image']['tmp_name'], $packageImagePath)) {
+                throw new Exception("Échec de l'upload de l'image du colis.");
+            }
         }
-        $fileName = uniqid() . '_' . basename($_FILES['package_image']['name']);
-        $packageImagePath = $imgDir . $fileName;
-        move_uploaded_file($_FILES['package_image']['tmp_name'], $packageImagePath);
-    }
 
-    // 🔁 Préparer les données à envoyer au modèle
-    $data = [
-        'order_id'       => $_POST['order_id'],
-        'shipment_date'  => $_POST['shipment_date'],
-        'notes'          => $_POST['notes'] ?? null,
-        'transport_id'   => $_POST['transport_id'],
-        'receipt_path'   => $receiptPath,
-        'tracking_code'  => $_POST['tracking_code'] ?? null,
-        'package_weight' => $_POST['package_weight'] ?? null,
-        'transport_fee'  => $_POST['transport_fee'] ?? null,
-        'package_image'  => $packageImagePath,
-        'shipment_items' => $_POST['shipment_items'] ?? [],
-    ];
+        // 🔁 Préparer les données à envoyer au modèle
+        $data = [
+            'order_id'       => $_POST['order_id'],
+            'shipment_date'  => $_POST['shipment_date'],
+            'notes'          => $_POST['notes'] ?? null,
+            'transport_id'   => $_POST['transport_id'],
+            'receipt_path'   => $receiptPath,
+            'tracking_code'  => $_POST['tracking_code'] ?? null,
+            'package_weight' => $_POST['package_weight'] ?? null,
+            'transport_fee'  => $_POST['transport_fee'] ?? null,
+            'package_image'  => $packageImagePath,
+            'shipment_items' => $_POST['shipment_items'] ?? [],
+        ];
 
-    // 🔁 Créer l'envoi
-    $shipmentId = Shipment::create($data, $_FILES);
+        // 🔁 Créer l'envoi
+        $shipmentId = Shipment::create($data, $_FILES);
 
-    if ($shipmentId) {
-        header("Location: index.php?route=orders/show/" . $_POST['order_id']);
+        if ($shipmentId) {
+            header("Location: index.php?route=orders/show/" . $_POST['order_id']);
+            exit;
+        } else {
+            throw new Exception("Erreur lors de la création de l'envoi partiel.");
+        }
+    } catch (Exception $e) {
+        $_SESSION['error'] = $e->getMessage();
+        $orderId = $_POST['order_id'] ?? '';
+        header("Location: ?route=shipments/create&order_id=" . $orderId);
         exit;
-    } else {
-        echo "❌ Erreur lors de la création de l'envoi partiel.";
     }
 }
 

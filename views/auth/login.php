@@ -20,7 +20,7 @@ start_session_if_needed();
                         <h3 class="card-title text-center mb-4">Connexion</h3>
 
                         <?php if (isset($_SESSION['error'])): ?>
-                            <div class="alert alert-danger"><?= $_SESSION['error'];
+                            <div class="alert alert-danger"><?= e($_SESSION['error']);
                             unset($_SESSION['error']); ?></div>
                         <?php endif; ?>
 
@@ -29,6 +29,7 @@ start_session_if_needed();
                         <?php endif; ?>
 
                         <form method="POST" action="?route=login">
+                            <?= csrf_field(); ?>
                             <div class="mb-3">
                                 <label for="email" class="form-label">Adresse e-mail</label>
                                 <input name="email" type="email" class="form-control" id="email" required>

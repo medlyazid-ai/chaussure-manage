@@ -17,6 +17,7 @@ include 'views/layout/header.php';
                     <div class="card-body">
                         <h3 class="card-title text-center mb-4">Créer un compte</h3>
                         <form method="POST" action="?route=register">
+                            <?= csrf_field(); ?>
                             <div class="mb-3">
                                 <label for="name" class="form-label">Nom</label>
                                 <input name="name" type="text" class="form-control" id="name" required>
@@ -34,7 +35,7 @@ include 'views/layout/header.php';
                             </div>
                         </form>
                         <?php if (isset($_SESSION['success'])): ?>
-                            <div class="alert alert-success"><?= $_SESSION['success'];
+                            <div class="alert alert-success"><?= e($_SESSION['success']);
                             unset($_SESSION['success']); ?></div>
                         <?php endif; ?>
 

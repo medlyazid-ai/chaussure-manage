@@ -10,10 +10,10 @@ include 'views/layout/header.php';
     <a href="?route=orders/create" class="btn btn-success">➕ Créer une commande</a>
 </div>
 
-<form method="GET" class="row mb-4">
+<form method="GET" class="row g-2 mb-4">
     <input type="hidden" name="route" value="orders">
     
-    <div class="col-md-4">
+    <div class="col-md-3">
         <label class="form-label">👤 Fournisseur</label>
         <select name="supplier_id" class="form-select">
             <option value="">-- Tous --</option>
@@ -25,11 +25,11 @@ include 'views/layout/header.php';
         </select>
     </div>
 
-    <div class="col-md-4">
+    <div class="col-md-3">
         <label class="form-label">📌 Statut</label>
         <select name="status" class="form-select">
             <option value="">-- Tous --</option>
-            <?php foreach (['Initial', 'Validé et en cours de production', 'Envoi partiel', 'Envoi complet', 'Livré à la destination'] as $status): ?>
+            <?php foreach (['Initial', 'Validé – production en cours', 'Envoi partiel', 'Envoi complet', 'Livré à la destination'] as $status): ?>
                 <option value="<?= $status ?>" <?= (isset($_GET['status']) && $_GET['status'] === $status) ? 'selected' : '' ?>>
                     <?= $status ?>
                 </option>
@@ -37,7 +37,41 @@ include 'views/layout/header.php';
         </select>
     </div>
 
-    <div class="col-md-4 d-flex align-items-end">
+    <div class="col-md-3">
+        <label class="form-label">🌍 Pays</label>
+        <select name="country_id" class="form-select">
+            <option value="">-- Tous --</option>
+            <?php foreach ($countries as $c): ?>
+                <option value="<?= $c['id'] ?>" <?= (isset($_GET['country_id']) && $_GET['country_id'] == $c['id']) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($c['name']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label">🏢 Société</label>
+        <select name="company_id" class="form-select">
+            <option value="">-- Toutes --</option>
+            <?php foreach ($companies as $c): ?>
+                <option value="<?= $c['id'] ?>" <?= (isset($_GET['company_id']) && $_GET['company_id'] == $c['id']) ? 'selected' : '' ?>>
+                    <?= e($c['name']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label">📅 Du</label>
+        <input type="date" name="date_from" class="form-control" value="<?= isset($_GET['date_from']) ? e($_GET['date_from']) : '' ?>">
+    </div>
+
+    <div class="col-md-3">
+        <label class="form-label">📅 Au</label>
+        <input type="date" name="date_to" class="form-control" value="<?= isset($_GET['date_to']) ? e($_GET['date_to']) : '' ?>">
+    </div>
+
+    <div class="col-md-3 d-flex align-items-end">
         <button type="submit" class="btn btn-primary w-100">🔍 Filtrer</button>
     </div>
 </form>
@@ -58,6 +92,7 @@ include 'views/layout/header.php';
                     <th>Image</th>
                     <th>Fournisseur</th>
                     <th>Pays</th>
+                    <th>Société</th>
                     <th>Quantité</th>
                     <th>Total</th>
                     <th>Payé</th>
@@ -82,37 +117,22 @@ include 'views/layout/header.php';
 
                     <?php foreach ($orders as $order): ?>
                         <?php
-            $total = Order::getTotalAmount($order['id']);
-                        $paid = Payment::totalAllocatedToOrder($order['id']);
-                        $totalAll += $total;
-                        $totalPaidAll += $paid;
-                        $totalQtyAll += $order['total_quantity'];
+                            $total = Order::getTotalAmount($order['id']);
+                            $paid = Payment::totalAllocatedToOrder($order['id']);
+                            $totalAll += $total;
+                            $totalPaidAll += $paid;
+                            $totalQtyAll += $order['total_quantity'];
 
-                        $flag = $flags[$order['destination_country']] ?? '';
-                        $badge = match ($order['status']) {
-                            'Initial' => 'secondary',
-                            'Validé et en cours de production' => 'warning',
-                            'Envoi partiel' => 'info',
-                            'Envoi complet' => 'primary',
-                            'Livré à la destination' => 'success',
-                            default => 'dark'
-                        };
-                        $variants = Order::orderItems($order['id']);
-                        ?>
-
-                    <?php
-                        $total = Order::getTotalAmount($order['id']);
-                        $paid = Payment::totalAllocatedToOrder($order['id']);
-                        $flag = $flags[$order['destination_country']] ?? '';
-                        $badge = match ($order['status']) {
-                            'Initial' => 'secondary',
-                            'Validé et en cours de production' => 'warning',
-                            'Envoi partiel' => 'info',
-                            'Envoi complet' => 'primary',
-                            'Livré à la destination' => 'success',
-                            default => 'dark'
-                        };
-                        $variants = Order::orderItems($order['id']);
+                            $flag = $flags[$order['destination_country']] ?? '';
+                            $badge = match ($order['status']) {
+                                'Initial' => 'secondary',
+                                'Validé et en cours de production' => 'warning',
+                                'Envoi partiel' => 'info',
+                                'Envoi complet' => 'primary',
+                                'Livré à la destination' => 'success',
+                                default => 'dark'
+                            };
+                            $variants = Order::orderItems($order['id']);
                         ?>
                     <tr>
                         <td>#<?= $order['id'] ?></td>
@@ -125,6 +145,7 @@ include 'views/layout/header.php';
                         </td>
                         <td><?= htmlspecialchars($order['supplier_name']) ?></td>
                         <td><?= $flag . ' ' . htmlspecialchars($order['destination_country']) ?></td>
+                        <td><?= !empty($order['company_name']) ? e($order['company_name']) : '<span class="text-muted">—</span>' ?></td>
                         <td><?= $order['total_quantity'] ?></td>
                         <td><?= number_format($total, 2) ?> MAD</td>
                         <td><?= number_format($paid, 2) ?> MAD</td>
@@ -140,6 +161,7 @@ include 'views/layout/header.php';
                                 <a href="?route=orders/edit/<?= $order['id'] ?>" class="btn btn-sm btn-warning" title="Modifier">
                                     <i class="bi bi-pencil">✏️</i>
                                 </a>
+                            <a href="?route=payments/create&supplier_id=<?= $order['supplier_id'] ?>&order_id=<?= $order['id'] ?>" class="btn btn-sm btn-success" title="Payer fournisseur">💳</a>
                             <button class="btn btn-sm btn-info" onclick="toggleDetails(<?= $order['id'] ?>)">🧩</button>
                             <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalDelete<?= $order['id'] ?>">🗑️</button>
 
@@ -149,6 +171,7 @@ include 'views/layout/header.php';
                               <div class="modal-dialog modal-dialog-centered">
                                 <div class="modal-content">
                                   <form method="POST" action="?route=orders/update-status/<?= $order['id'] ?>">
+                                      <?= csrf_field(); ?>
                                     <div class="modal-header bg-dark text-white">
                                       <h5 class="modal-title" id="statusLabel<?= $order['id'] ?>">Modifier le statut de la commande #<?= $order['id'] ?></h5>
                                       <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -156,7 +179,7 @@ include 'views/layout/header.php';
                                     <div class="modal-body">
                                       <label for="statusSelect<?= $order['id'] ?>" class="form-label">Nouveau statut</label>
                                       <select name="status" id="statusSelect<?= $order['id'] ?>" class="form-select" required>
-                                        <?php foreach (['Initial', 'Validé et en cours de production', 'Envoi partiel', 'Envoi complet', 'Livré à la destination'] as $status): ?>
+                                        <?php foreach (['Initial', 'Validé – production en cours', 'Envoi partiel', 'Envoi complet', 'Livré à la destination'] as $status): ?>
                                           <option value="<?= $status ?>" <?= $status === $order['status'] ? 'selected' : '' ?>><?= $status ?></option>
                                         <?php endforeach; ?>
                                       </select>
@@ -185,6 +208,7 @@ include 'views/layout/header.php';
                                   <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                                     <form method="POST" action="?route=orders/delete/<?= $order['id'] ?>" class="d-inline">
+                                        <?= csrf_field(); ?>
                                       <button type="submit" class="btn btn-danger">Oui</button>
                                     </form>
                                   </div>
@@ -196,7 +220,7 @@ include 'views/layout/header.php';
 
                     <!-- Détails des variantes -->
                     <tr id="details-<?= $order['id'] ?>" style="display: none; background: #f9f9f9;">
-                        <td colspan="9">
+                        <td colspan="11">
                             <strong>📦 Détails des variantes :</strong>
                             <table class="table table-sm table-bordered mt-2">
                                 <thead>
@@ -224,11 +248,11 @@ include 'views/layout/header.php';
                     </tr>
                 <?php endforeach ?>
                 <tr class="table-warning fw-bold">
-                    <td colspan="3" class="text-end">TOTAL GÉNÉRAL :</td>
+                    <td colspan="4" class="text-end">TOTAL GÉNÉRAL :</td>
                     <td><?= $totalQtyAll ?></td>
                     <td><?= number_format($totalAll, 2) ?> MAD</td>
                     <td><?= number_format($totalPaidAll, 2) ?> MAD</td>
-                    <td colspan="3">
+                    <td colspan="4">
                         Reste à payer : <?= number_format($totalAll - $totalPaidAll, 2) ?> MAD
                     </td>
                 </tr>
@@ -236,6 +260,7 @@ include 'views/layout/header.php';
             </tbody>
         </table>
     </div>
+    <?= render_pagination($page ?? 1, $totalPages ?? 1, array_merge($_GET, ['route' => 'orders'])) ?>
 <?php endif; ?>
 
 <script>

@@ -6,6 +6,7 @@ include 'views/layout/header.php';
 <div class="container mt-4">
     <h2>📝 Nouvelle commande</h2>
     <form method="POST" action="?route=orders/store" enctype="multipart/form-data" class="mt-4">
+        <?= csrf_field(); ?>
 
         <!-- Choix du fournisseur -->
         <div class="mb-3">
@@ -19,16 +20,24 @@ include 'views/layout/header.php';
         </div>
 
         <div class="mb-3">
-        <label for="country_id" class="form-label">📍 Pays de destination</label>
-        <select name="country_id" id="country_id" class="form-select" required>
-            <option value="">-- Choisir un pays --</option>
-            <?php foreach ($countries as $country): ?>
-                <option value="<?= $country['id'] ?>">
-                    <?= $country['flag'] . ' ' . $country['name'] ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-    </div>
+            <label for="country_id" class="form-label">📍 Pays de destination</label>
+            <select name="country_id" id="country_id" class="form-select" required>
+                <option value="">-- Choisir un pays --</option>
+                <?php foreach ($countries as $country): ?>
+                    <option value="<?= $country['id'] ?>">
+                        <?= $country['flag'] . ' ' . $country['name'] ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="company_id" class="form-label">🏢 Société (destination)</label>
+            <select name="company_id" id="company_id" class="form-select">
+                <option value="">-- Choisir une société --</option>
+            </select>
+            <div class="form-text">Optionnel si pas de société.</div>
+        </div>
 
 
 
@@ -45,10 +54,16 @@ include 'views/layout/header.php';
             </select>
         </div>
 
+        <div class="mb-3">
+            <label for="unit_price" class="form-label">Prix unitaire (MAD)</label>
+            <input type="number" step="0.01" class="form-control" name="unit_price" id="unit_price" required>
+        </div>
+
         <hr>
-        <h5>🧩 Variantes à commander</h5>
-        <div id="variantItems"></div>
-        <button type="button" class="btn btn-outline-primary my-3" id="addVariantItem">➕ Ajouter une variante</button>
+        <h5>🧩 Variantes (du produit)</h5>
+        <div id="variantItems" class="mb-3">
+            <div class="alert alert-info">Choisissez un produit pour charger ses variantes.</div>
+        </div>
 
         <hr>
         <button type="submit" class="btn btn-success">✅ Enregistrer la commande</button>
@@ -58,40 +73,30 @@ include 'views/layout/header.php';
 
 <!-- JavaScript dynamique pour variantes -->
 <script>
-let variantIndex = 0;
-
-document.getElementById('addVariantItem').addEventListener('click', () => {
+document.getElementById('product_id').addEventListener('change', async function () {
+    const productId = this.value;
     const container = document.getElementById('variantItems');
-    const html = `
-        <div class="variant-item border rounded p-3 mb-3 position-relative bg-light">
-            <button type="button" class="btn-close position-absolute top-0 end-0 m-2 remove-variant-item" aria-label="Supprimer"></button>
-            <div class="row">
-                <div class="col-md-3">
-                    <label class="form-label">Taille</label>
-                    <input type="text" class="form-control" name="variants[${variantIndex}][size]" required>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Couleur</label>
-                    <input type="text" class="form-control" name="variants[${variantIndex}][color]" required>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Quantité</label>
-                    <input type="number" class="form-control" name="variants[${variantIndex}][quantity_ordered]" min="1" required>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Prix unitaire (MAD)</label>
-                    <input type="number" step="0.01" class="form-control" name="variants[${variantIndex}][unit_price]" required>
-                </div>
-            </div>
-        </div>`;
-    container.insertAdjacentHTML('beforeend', html);
-    variantIndex++;
+    if (!productId) {
+        container.innerHTML = '<div class="alert alert-info">Choisissez un produit pour charger ses variantes.</div>';
+        return;
+    }
+    container.innerHTML = 'Chargement...';
+    const res = await fetch(`?route=orders/variants&product_id=${productId}`);
+    const html = await res.text();
+    container.innerHTML = html;
 });
 
-document.addEventListener('click', function (e) {
-    if (e.target && e.target.classList.contains('remove-variant-item')) {
-        e.target.closest('.variant-item').remove();
+document.getElementById('country_id').addEventListener('change', async function () {
+    const countryId = this.value;
+    const select = document.getElementById('company_id');
+    select.innerHTML = '<option value="">Chargement...</option>';
+    if (!countryId) {
+        select.innerHTML = '<option value="">-- Choisir une société --</option>';
+        return;
     }
+    const res = await fetch(`?route=companies/by_country&country_id=${countryId}`);
+    const html = await res.text();
+    select.innerHTML = html;
 });
 </script>
 

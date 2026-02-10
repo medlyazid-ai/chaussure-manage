@@ -22,10 +22,12 @@ class Order
         global $pdo;
 
         $stmt = $pdo->query("
-            SELECT o.*, s.name AS supplier_name, c.name AS destination_country, c.flag
+            SELECT o.*, s.name AS supplier_name, c.name AS destination_country, c.flag,
+                   cc.name AS company_name
             FROM orders o
             JOIN suppliers s ON o.supplier_id = s.id
             JOIN countries c ON o.country_id = c.id
+            LEFT JOIN country_companies cc ON o.company_id = cc.id
             ORDER BY o.created_at DESC
         ");
 
@@ -35,10 +37,11 @@ class Order
     public static function update($id, $data)
     {
         global $pdo;
-        $stmt = $pdo->prepare("UPDATE orders SET supplier_id = ?, country_id = ?, product_id = ? WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE orders SET supplier_id = ?, country_id = ?, company_id = ?, product_id = ? WHERE id = ?");
         return $stmt->execute([
             $data['supplier_id'],
             $data['country_id'],
+            $data['company_id'] ?? null,
             $data['product_id'],
             $id
         ]);
@@ -95,13 +98,15 @@ class Order
         global $pdo;
 
         $variants = $data['variants'] ?? [];
+        $unitPriceDefault = isset($data['unit_price']) ? floatval($data['unit_price']) : null;
         $totalQuantity = array_sum(array_column($variants, 'quantity_ordered'));
 
-        $stmt = $pdo->prepare("INSERT INTO orders (supplier_id, product_id, country_id, status, total_quantity) VALUES (?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO orders (supplier_id, product_id, country_id, company_id, status, total_quantity) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $data['supplier_id'],
             $data['product_id'],
             $data['country_id'],
+            $data['company_id'] ?? null,
             'Initial',
             $totalQuantity
         ]);
@@ -129,11 +134,16 @@ class Order
                 $variantId = $pdo->lastInsertId();
             }
 
+            $qty = (int)($v['quantity_ordered'] ?? 0);
+            if ($qty <= 0) {
+                continue;
+            }
+            $price = isset($v['unit_price']) ? floatval($v['unit_price']) : $unitPriceDefault;
             $stmtInsertItem->execute([
                 $orderId,
                 $variantId,
-                $v['quantity_ordered'],
-                $v['unit_price']
+                $qty,
+                $price
             ]);
         }
 
@@ -201,10 +211,12 @@ class Order
                     o.*, 
                     s.name AS supplier_name,
                     c.name AS destination_country,
-                    c.flag AS country_flag
+                    c.flag AS country_flag,
+                    cc.name AS company_name
                 FROM orders o
                 JOIN suppliers s ON o.supplier_id = s.id
                 JOIN countries c ON o.country_id = c.id
+                LEFT JOIN country_companies cc ON o.company_id = cc.id
                 ORDER BY o.created_at DESC";
         $stmt = $pdo->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -215,10 +227,12 @@ class Order
     {
         global $pdo;
         $stmt = $pdo->prepare("
-            SELECT o.*, s.name AS supplier_name, c.name AS destination_country, c.flag
+            SELECT o.*, s.name AS supplier_name, c.name AS destination_country, c.flag,
+                   cc.name AS company_name
             FROM orders o
             JOIN suppliers s ON o.supplier_id = s.id
             JOIN countries c ON o.country_id = c.id
+            LEFT JOIN country_companies cc ON o.company_id = cc.id
             WHERE o.id = ?
         ");
         $stmt->execute([$orderId]);
@@ -316,15 +330,18 @@ class Order
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function filterWithSupplier($supplierId = null, $status = null)
+    public static function filterWithSupplier($supplierId = null, $status = null, $countryId = null, $dateFrom = null, $dateTo = null, $companyId = null, $limit = null, $offset = null)
     {
         global $pdo;
 
         $sql = "
-            SELECT o.*, s.name AS supplier_name, c.name AS destination_country, c.flag
+            SELECT o.*, s.name AS supplier_name, c.name AS destination_country, c.flag,
+                   p.name AS product_name, p.image_path, cc.name AS company_name
             FROM orders o
             JOIN suppliers s ON o.supplier_id = s.id
             JOIN countries c ON o.country_id = c.id
+            JOIN products p ON o.product_id = p.id
+            LEFT JOIN country_companies cc ON o.company_id = cc.id
             WHERE 1=1
         ";
 
@@ -340,7 +357,30 @@ class Order
             $params[] = $status;
         }
 
+        if ($countryId) {
+            $sql .= " AND o.country_id = ?";
+            $params[] = $countryId;
+        }
+
+        if ($dateFrom) {
+            $sql .= " AND DATE(o.created_at) >= ?";
+            $params[] = $dateFrom;
+        }
+
+        if ($dateTo) {
+            $sql .= " AND DATE(o.created_at) <= ?";
+            $params[] = $dateTo;
+        }
+
+        if ($companyId) {
+            $sql .= " AND o.company_id = ?";
+            $params[] = $companyId;
+        }
+
         $sql .= " ORDER BY o.created_at DESC";
+        if ($limit !== null) {
+            $sql .= " LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+        }
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
@@ -348,9 +388,56 @@ class Order
         return $stmt->fetchAll();
     }
 
+    public static function countFiltered($supplierId = null, $status = null, $countryId = null, $dateFrom = null, $dateTo = null, $companyId = null)
+    {
+        global $pdo;
+        $sql = "
+            SELECT COUNT(*) 
+            FROM orders o
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if ($supplierId) {
+            $sql .= " AND o.supplier_id = ?";
+            $params[] = $supplierId;
+        }
+        if ($status) {
+            $sql .= " AND o.status = ?";
+            $params[] = $status;
+        }
+        if ($countryId) {
+            $sql .= " AND o.country_id = ?";
+            $params[] = $countryId;
+        }
+        if ($dateFrom) {
+            $sql .= " AND DATE(o.created_at) >= ?";
+            $params[] = $dateFrom;
+        }
+        if ($dateTo) {
+            $sql .= " AND DATE(o.created_at) <= ?";
+            $params[] = $dateTo;
+        }
+        if ($companyId) {
+            $sql .= " AND o.company_id = ?";
+            $params[] = $companyId;
+        }
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int)$stmt->fetchColumn();
+    }
+
     public static function updateStatus($id, $newStatus)
     {
         global $pdo;
+        // Normaliser les statuts pour correspondre à l'ENUM DB
+        $map = [
+            'Validé et en cours de production' => 'Validé – production en cours'
+        ];
+        if (isset($map[$newStatus])) {
+            $newStatus = $map[$newStatus];
+        }
         $stmt = $pdo->prepare("UPDATE orders SET status = ? WHERE id = ?");
         return $stmt->execute([$newStatus, $id]);
     }

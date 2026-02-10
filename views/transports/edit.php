@@ -4,11 +4,12 @@
     <h2>✏️ Modifier le transporteur</h2>
 
         <?php if (!empty($_SESSION['error'])): ?>
-            <div class="alert alert-danger"><?= $_SESSION['error'];
+            <div class="alert alert-danger"><?= e($_SESSION['error']);
             unset($_SESSION['error']); ?></div>
         <?php endif; ?>
 
         <form method="POST" action="?route=transports/update/<?= $transport['id'] ?>">
+            <?= csrf_field(); ?>
             <div class="mb-3">
                 <label for="name" class="form-label">🚛 Nom du transporteur</label>
                 <input type="text" class="form-control" name="name" id="name" required

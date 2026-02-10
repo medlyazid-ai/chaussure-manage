@@ -13,6 +13,7 @@ include 'views/layout/header.php';
     </div>
 
     <form method="POST" action="?route=shipments/store" enctype="multipart/form-data">
+        <?= csrf_field(); ?>
 
         <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
 

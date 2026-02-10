@@ -5,12 +5,12 @@
     <a href="?route=transports/create" class="btn btn-success mb-3">➕ Ajouter un transporteur</a>
 
     <?php if (!empty($_SESSION['success'])): ?>
-        <div class="alert alert-success"><?= $_SESSION['success'];
+        <div class="alert alert-success"><?= e($_SESSION['success']);
         unset($_SESSION['success']); ?></div>
     <?php endif; ?>
 
     <?php if (!empty($_SESSION['error'])): ?>
-        <div class="alert alert-danger"><?= $_SESSION['error'];
+        <div class="alert alert-danger"><?= e($_SESSION['error']);
         unset($_SESSION['error']); ?></div>
     <?php endif; ?>
 
@@ -50,6 +50,7 @@
                                         </div>
                                         <div class="modal-footer">
                                             <form method="POST" action="?route=transports/delete/<?= $transport['id'] ?>">
+                                                <?= csrf_field(); ?>
                                                 <button type="submit" class="btn btn-danger">Oui, supprimer</button>
                                             </form>
                                             <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>

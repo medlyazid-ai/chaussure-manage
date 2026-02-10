@@ -7,6 +7,7 @@ include 'views/layout/header.php';
     <h2>✏️ Modifier la commande #<?= $order['id'] ?></h2>
 
     <form method="POST" action="?route=orders/update/<?= $order['id'] ?>" enctype="multipart/form-data" class="mt-4">
+        <?= csrf_field(); ?>
 
         <!-- Choix du fournisseur -->
         <div class="mb-3">
@@ -32,6 +33,19 @@ include 'views/layout/header.php';
                     </option>
                 <?php endforeach; ?>
             </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="company_id" class="form-label">🏢 Société (destination)</label>
+            <select name="company_id" id="company_id" class="form-select">
+                <option value="">-- Choisir une société --</option>
+                <?php foreach ($companies as $c): ?>
+                    <option value="<?= $c['id'] ?>" <?= ($order['company_id'] == $c['id']) ? 'selected' : '' ?>>
+                        <?= e($c['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <div class="form-text">Optionnel si pas de société.</div>
         </div>
 
 
@@ -122,6 +136,19 @@ document.addEventListener('click', function (e) {
     if (e.target && e.target.classList.contains('remove-variant-item')) {
         e.target.closest('.variant-item').remove();
     }
+});
+
+document.getElementById('country_id').addEventListener('change', async function () {
+    const countryId = this.value;
+    const select = document.getElementById('company_id');
+    select.innerHTML = '<option value="">Chargement...</option>';
+    if (!countryId) {
+        select.innerHTML = '<option value="">-- Choisir une société --</option>';
+        return;
+    }
+    const res = await fetch(`?route=companies/by_country&country_id=${countryId}`);
+    const html = await res.text();
+    select.innerHTML = html;
 });
 </script>
 

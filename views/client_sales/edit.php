@@ -4,8 +4,22 @@
     <h2>✏️ Modifier la facture client #<?= $sale['id'] ?> - <?= htmlspecialchars($sale['country_name']) ?></h2>
 
     <form action="?route=client_sales/update/<?= $sale['id'] ?>" method="POST" enctype="multipart/form-data">
+        <?= csrf_field(); ?>
 
         <input type="hidden" name="country_id" value="<?= $sale['country_id'] ?>">
+
+        <div class="mb-3">
+            <label for="company_id" class="form-label">🏢 Société</label>
+            <select name="company_id" id="company_id" class="form-select">
+                <option value="">-- Choisir une société --</option>
+                <?php foreach ($companies as $c): ?>
+                    <option value="<?= $c['id'] ?>" <?= ($sale['company_id'] == $c['id']) ? 'selected' : '' ?>>
+                        <?= e($c['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <div class="form-text">Optionnel si pas de société.</div>
+        </div>
 
         <div class="mb-3">
             <label for="sale_date" class="form-label">📅 Date de la vente</label>
@@ -13,13 +27,55 @@
         </div>
 
         <div class="mb-3">
-            <label for="customer_name" class="form-label">👤 Client</label>
-            <input type="text" name="customer_name" id="customer_name" class="form-control" value="<?= htmlspecialchars($sale['customer_name']) ?>">
+            <label for="partner_id" class="form-label">🤝 Partenaire qui a encaissé</label>
+            <select name="partner_id" id="partner_id" class="form-select" required>
+                <option value="">-- Choisir un partenaire --</option>
+                <?php foreach ($partners as $p): ?>
+                    <option value="<?= $p['id'] ?>" <?= ($sale['partner_id'] == $p['id']) ? 'selected' : '' ?>>
+                        <?= e($p['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
         </div>
 
         <div class="mb-3">
-            <label for="notes" class="form-label">📝 Notes</label>
-            <textarea name="notes" id="notes" class="form-control" rows="2"><?= htmlspecialchars($sale['notes']) ?></textarea>
+            <label for="account_id" class="form-label">🏦 Compte du partenaire</label>
+            <select name="account_id" id="account_id" class="form-select" required>
+                <option value="">-- Choisir un compte --</option>
+                <?php foreach ($accountsForPartner as $a): ?>
+                    <option value="<?= $a['id'] ?>" <?= ($sale['account_id'] == $a['id']) ? 'selected' : '' ?>>
+                        <?= e($a['account_label']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <div class="row g-2">
+            <div class="col-md-4">
+                <label for="amount_received" class="form-label">💵 Montant reçu</label>
+                <input type="number" step="0.01" min="0" name="amount_received" id="amount_received" class="form-control" value="<?= e($sale['amount_received']) ?>" required>
+            </div>
+            <div class="col-md-2">
+                <label for="currency" class="form-label">💱 Devise</label>
+                <input type="text" name="currency" id="currency" class="form-control" value="<?= e($sale['currency']) ?>" maxlength="10" required>
+            </div>
+            <div class="col-md-3">
+                <label for="received_date" class="form-label">📥 Date d'encaissement</label>
+                <input type="date" name="received_date" id="received_date" class="form-control" value="<?= e($sale['received_date']) ?>">
+            </div>
+            <div class="col-md-3">
+                <label for="payment_method" class="form-label">💳 Méthode</label>
+                <select name="payment_method" id="payment_method" class="form-select">
+                    <option value="">-- Choisir --</option>
+                    <?php $pm = $sale['payment_method'] ?? ''; ?>
+                    <option value="Cash" <?= $pm === 'Cash' ? 'selected' : '' ?>>💵 Cash</option>
+                    <option value="Virement" <?= $pm === 'Virement' ? 'selected' : '' ?>>🏦 Virement</option>
+                    <option value="Binance" <?= $pm === 'Binance' ? 'selected' : '' ?>>🟡 Binance</option>
+                    <option value="Western Union" <?= $pm === 'Western Union' ? 'selected' : '' ?>>🌍 Western Union</option>
+                    <option value="Chèque" <?= $pm === 'Chèque' ? 'selected' : '' ?>>✍️ Chèque</option>
+                    <option value="Autre" <?= $pm === 'Autre' ? 'selected' : '' ?>>📁 Autre</option>
+                </select>
+            </div>
         </div>
 
         <div class="mb-3">
@@ -69,6 +125,20 @@
 </div>
 
 <script>
+    async function loadAccountsForPartner(partnerId, selectedId = '') {
+        const accountSelect = document.getElementById('account_id');
+        if (!partnerId) {
+            accountSelect.innerHTML = '<option value="">-- Choisir un compte --</option>';
+            return;
+        }
+        const res = await fetch(`?route=accounts/by_partner&partner_id=${partnerId}`);
+        const html = await res.text();
+        accountSelect.innerHTML = html;
+        if (selectedId) {
+            accountSelect.value = selectedId;
+        }
+    }
+
     document.getElementById('add-line').addEventListener('click', function () {
         const original = document.querySelector('.sale-line');
         const clone = original.cloneNode(true);
@@ -83,6 +153,17 @@
             if (lines.length > 1) {
                 e.target.closest('.sale-line').remove();
             }
+        }
+    });
+
+    document.getElementById('partner_id').addEventListener('change', function () {
+        loadAccountsForPartner(this.value);
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const partnerSelect = document.getElementById('partner_id');
+        if (partnerSelect.value) {
+            loadAccountsForPartner(partnerSelect.value, '<?= e($sale['account_id']) ?>');
         }
     });
 </script>

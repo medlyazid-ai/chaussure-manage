@@ -5,7 +5,7 @@
     <p class="text-muted">Sélectionnez d'abord un pays pour ne voir que les variantes disponibles en stock.</p>
 
     <?php if (!empty($_SESSION['error'])): ?>
-        <div class="alert alert-danger"><?= $_SESSION['error'] ?></div>
+        <div class="alert alert-danger"><?= e($_SESSION['error']) ?></div>
         <?php unset($_SESSION['error']); ?>
     <?php endif; ?>
 

@@ -9,6 +9,7 @@ include 'views/layout/header.php';
 </div>
 
 <form method="POST" action="?route=suppliers/store" class="row g-3">
+    <?= csrf_field(); ?>
 
     <div class="col-md-6">
         <label for="name" class="form-label">Nom du fournisseur</label>

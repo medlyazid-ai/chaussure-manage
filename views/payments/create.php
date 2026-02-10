@@ -7,12 +7,16 @@ include 'views/layout/header.php';
     <h2>💰 Ajouter un paiement fournisseur</h2>
 
     <form action="?route=payments/store" method="POST" enctype="multipart/form-data">
+        <?= csrf_field(); ?>
+        <input type="hidden" id="prefill_order_id" value="<?= isset($prefillOrderId) ? e($prefillOrderId) : '' ?>">
         <div class="mb-3">
             <label for="supplier_id" class="form-label">👤 Fournisseur</label>
             <select name="supplier_id" id="supplier_id" class="form-select" required>
                 <option value="">-- Choisir un fournisseur --</option>
                 <?php foreach ($suppliers as $supplier): ?>
-                    <option value="<?= $supplier['id'] ?>"><?= htmlspecialchars($supplier['name']) ?></option>
+                    <option value="<?= $supplier['id'] ?>" <?= (isset($prefillSupplierId) && $prefillSupplierId == $supplier['id']) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($supplier['name']) ?>
+                    </option>
                 <?php endforeach; ?>
             </select>
         </div>
@@ -24,9 +28,14 @@ include 'views/layout/header.php';
         </div>
 
 
-        <div class="mb-3" id="amount-block" style="display: none;">
-            <label for="amount" class="form-label">💵 Montant total du paiement</label>
-            <input type="number" step="0.01" name="amount" id="amount" class="form-control">
+        <div class="mb-3">
+            <label for="partner_id" class="form-label">🤝 Partenaire payeur</label>
+            <select name="partner_id" id="partner_id" class="form-select" required>
+                <option value="">-- Choisir --</option>
+                <?php foreach ($partners as $p): ?>
+                    <option value="<?= $p['id'] ?>"><?= e($p['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
         </div>
 
         <div class="mb-3">
@@ -35,9 +44,18 @@ include 'views/layout/header.php';
                 <option value="">-- Choisir une méthode --</option>
                 <option value="Cash">💵 Cash</option>
                 <option value="Virement">🏦 Virement</option>
+                <option value="Binance">🟡 Binance</option>
                 <option value="Western Union">🌍 Western Union</option>
                 <option value="Chèque">✍️ Chèque</option>
                 <option value="Autre">📁 Autre</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="currency" class="form-label">💱 Devise</label>
+            <select name="currency" id="currency" class="form-select" required>
+                <option value="MAD" selected>MAD</option>
+                <option value="USD">USD</option>
             </select>
         </div>
 
@@ -76,34 +94,39 @@ include 'views/layout/header.php';
 document.getElementById('supplier_id').addEventListener('change', function () {
     const supplierId = this.value;
     const ordersContainer = document.getElementById('orders-table');
-    const amountBlock = document.getElementById('amount-block');
     const submitBtn = document.querySelector('button[type="submit"]');
+    const prefillOrderId = document.getElementById('prefill_order_id').value;
 
     if (!supplierId) {
         ordersContainer.innerHTML = '<div class="alert alert-warning">Aucun fournisseur sélectionné.</div>';
-        amountBlock.style.display = 'none';
         submitBtn.disabled = true;
         return;
     }
 
-    fetch(`?route=payments/fetch_orders_by_supplier&supplier_id=${supplierId}`)
+    const extra = prefillOrderId ? `&order_id=${prefillOrderId}` : '';
+    fetch(`?route=payments/fetch_orders_by_supplier&supplier_id=${supplierId}${extra}`)
         .then(res => res.text())
         .then(html => {
             ordersContainer.innerHTML = html;
 
             if (html.includes("Aucune commande impayée")) {
-                amountBlock.style.display = 'none';
                 submitBtn.disabled = true;
             } else {
-                amountBlock.style.display = 'block';
                 submitBtn.disabled = false;
             }
         })
         .catch(() => {
             ordersContainer.innerHTML = '<div class="alert alert-danger">Erreur lors du chargement des commandes.</div>';
-            amountBlock.style.display = 'none';
             submitBtn.disabled = true;
         });
+});
+
+// auto-load if prefilled
+window.addEventListener('DOMContentLoaded', () => {
+    const supplierSelect = document.getElementById('supplier_id');
+    if (supplierSelect.value) {
+        supplierSelect.dispatchEvent(new Event('change'));
+    }
 });
 </script>
 

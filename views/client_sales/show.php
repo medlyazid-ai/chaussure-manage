@@ -10,8 +10,12 @@
             <img src="uploads/flags/<?= $sale['flag'] ?>" alt="<?= $sale['country_name'] ?>" style="height: 16px;">
         <?php endif; ?>
         <?= htmlspecialchars($sale['country_name']) ?><br>
-        <strong>Client :</strong> <?= htmlspecialchars($sale['customer_name']) ?><br>
-        <strong>Notes :</strong> <?= nl2br(htmlspecialchars($sale['notes'])) ?><br>
+        <strong>Société :</strong> <?= !empty($sale['company_name']) ? e($sale['company_name']) : '<span class="text-muted">—</span>' ?><br>
+        <strong>Partenaire :</strong> <?= !empty($sale['partner_name']) ? e($sale['partner_name']) : '<span class="text-muted">—</span>' ?><br>
+        <strong>Compte :</strong> <?= !empty($sale['account_label']) ? e($sale['account_label']) : '<span class="text-muted">—</span>' ?><br>
+        <strong>Montant reçu :</strong> <?= number_format((float)$sale['amount_received'], 2) ?> <?= e($sale['currency']) ?><br>
+        <strong>Méthode :</strong> <?= !empty($sale['payment_method']) ? e($sale['payment_method']) : '<span class="text-muted">—</span>' ?><br>
+        <strong>Date d'encaissement :</strong> <?= !empty($sale['received_date']) ? e($sale['received_date']) : '<span class="text-muted">—</span>' ?><br>
         <strong>Justificatif :</strong>
         <?php if ($sale['proof_file']): ?>
             <a href="<?= $sale['proof_file'] ?>" target="_blank" class="btn btn-outline-secondary btn-sm">📎 Voir le fichier</a>

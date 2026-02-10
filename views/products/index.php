@@ -8,6 +8,26 @@ include 'views/layout/header.php';
     <a href="?route=products/create" class="btn btn-primary">➕ Ajouter un produit</a>
 </div>
 
+<form method="GET" class="row g-2 mb-3">
+    <input type="hidden" name="route" value="products">
+    <div class="col-md-5">
+        <input type="text" name="search" class="form-control" placeholder="Rechercher un produit..." value="<?= isset($_GET['search']) ? e($_GET['search']) : '' ?>">
+    </div>
+    <div class="col-md-4">
+        <select name="category" class="form-select">
+            <option value="">-- Toutes les catégories --</option>
+            <?php foreach ($categories as $cat): ?>
+                <option value="<?= e($cat) ?>" <?= (isset($_GET['category']) && $_GET['category'] === $cat) ? 'selected' : '' ?>>
+                    <?= e($cat) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <button class="btn btn-outline-secondary w-100" type="submit">🔍 Filtrer</button>
+    </div>
+</form>
+
 <?php if (!empty($error)): ?>
     <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
 <?php endif; ?>
@@ -35,11 +55,11 @@ include 'views/layout/header.php';
                 <td><?= htmlspecialchars($product['name']) ?></td>
                 <td>
                     <ul class="mb-0">
-                        <?php if (empty($orders)): ?>
+                        <?php if (empty($product['variants'])): ?>
                             <div class="alert alert-info">Aucune variants enregistrée pour l’instant.</div>
                         <?php else: ?>
                             <?php foreach ($product['variants'] as $variant): ?>
-                                <li><?= htmlspecialchars($variant['size']) ?> : <?= $variant['stock_quantity'] ?> en stock</li>
+                                <li><?= htmlspecialchars($variant['size']) ?> : <?= (int)($variant['stock_quantity'] ?? 0) ?> en stock</li>
                             <?php endforeach; ?>
                         <?php endif; ?>    
                     </ul>
@@ -64,6 +84,7 @@ include 'views/layout/header.php';
                           <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                             <form method="POST" action="?route=products/delete/<?= $product['id'] ?>">
+                                <?= csrf_field(); ?>
                                 <button type="submit" class="btn btn-danger">Oui, supprimer</button>
                             </form>
                           </div>
@@ -77,5 +98,7 @@ include 'views/layout/header.php';
         </tbody>
     </table>
 </div>
+
+<?= render_pagination($page ?? 1, $totalPages ?? 1, array_merge($_GET, ['route' => 'products'])) ?>
 
 <?php include 'views/layout/footer.php'; ?>

@@ -5,12 +5,12 @@
     <p class="text-muted">Vue dynamique basée sur les envois livrés. Vous pouvez corriger les écarts (produits cassés, perdus...)</p>
 
     <?php if (!empty($_SESSION['success'])): ?>
-        <div class="alert alert-success"><?= $_SESSION['success'] ?></div>
+        <div class="alert alert-success"><?= e($_SESSION['success']) ?></div>
         <?php unset($_SESSION['success']); ?>
     <?php endif; ?>
 
     <?php if (!empty($_SESSION['error'])): ?>
-        <div class="alert alert-danger"><?= $_SESSION['error'] ?></div>
+        <div class="alert alert-danger"><?= e($_SESSION['error']) ?></div>
         <?php unset($_SESSION['error']); ?>
     <?php endif; ?>
 
@@ -67,6 +67,7 @@ foreach ($stocks as $stock) {
                                             </td>
                                             <td>
                                                 <form method="POST" action="?route=stocks/adjust" class="d-flex flex-wrap align-items-center justify-content-center gap-1">
+                                                    <?= csrf_field(); ?>
                                                     <input type="hidden" name="country_id" value="<?= $stock['country_id'] ?>">
                                                     <input type="hidden" name="variant_id" value="<?= $stock['variant_id'] ?>">
                                                     <input type="number" name="adjusted_quantity" class="form-control form-control-sm" placeholder="ex: -2" required style="width: 80px;">

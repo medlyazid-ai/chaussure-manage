@@ -9,6 +9,23 @@ class Supplier
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public static function allPaged($limit, $offset)
+    {
+        global $pdo;
+        $stmt = $pdo->prepare("SELECT * FROM suppliers ORDER BY name LIMIT ? OFFSET ?");
+        $stmt->bindValue(1, (int)$limit, PDO::PARAM_INT);
+        $stmt->bindValue(2, (int)$offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function countAll()
+    {
+        global $pdo;
+        $stmt = $pdo->query("SELECT COUNT(*) FROM suppliers");
+        return (int)$stmt->fetchColumn();
+    }
+
     public static function find($id)
     {
         global $pdo;

@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/utils.php';
 require_once __DIR__ . '/config/db.php';
 $pdo = Database::getInstance();
 
@@ -9,10 +10,32 @@ $resource = $parts[0] ?? '';
 $action = $parts[1] ?? null;
 $id = $parts[2] ?? null;
 
+start_session_if_needed();
+
+// 🔐 Auth guard (tout sauf login/register)
+$publicRoutes = ['login', 'register'];
+if (!in_array($resource, $publicRoutes, true)) {
+    require_once 'auth_check.php';
+}
+
+// 🛡️ CSRF protection for all POST requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+}
+
 // 📦 Importation des contrôleurs
 require_once 'controllers/AuthController.php';
+require_once 'controllers/DashboardController.php';
 require_once 'controllers/ProductController.php';
 require_once 'controllers/SupplierController.php';
+require_once 'controllers/CountryController.php';
+require_once 'controllers/CompanyController.php';
+require_once 'controllers/VariantController.php';
+require_once 'controllers/PartnerController.php';
+require_once 'controllers/PartnerAccountController.php';
+require_once 'controllers/CompanyInvoiceController.php';
+require_once 'controllers/PartnerExpenseController.php';
+require_once 'controllers/ReportController.php';
 require_once 'controllers/OrderController.php';
 require_once 'controllers/PaymentController.php';
 require_once 'controllers/ShipmentController.php';
@@ -36,7 +59,7 @@ switch ($resource) {
         logout();
         break;
     case 'dashboard':
-        include 'views/dashboard/index.php';
+        showDashboard();
         break;
 
         // 👞 Produits
@@ -59,6 +82,24 @@ switch ($resource) {
         }
         break;
 
+        // 🔖 Variantes
+    case 'variants':
+        switch ($action) {
+            case null: listVariants();
+                break;
+            case 'store': storeVariant();
+                break;
+            case 'update': updateVariant($id);
+                break;
+            case 'delete': deleteVariant($id);
+                break;
+            case 'stock': showVariantStockByCountry();
+                break;
+            default: echo "404 - Action variante inconnue.";
+                break;
+        }
+        break;
+
         // 👤 Fournisseurs
     case 'suppliers':
         switch ($action) {
@@ -77,6 +118,140 @@ switch ($resource) {
             case 'dashboard': dashboard();
                 break;
             default: echo "404 - Action fournisseur inconnue.";
+                break;
+        }
+        break;
+
+        // 🌍 Pays
+    case 'countries':
+        switch ($action) {
+            case null: listCountries();
+                break;
+            case 'create': showCreateCountryForm();
+                break;
+            case 'store': storeCountry();
+                break;
+            case 'edit': showEditCountryForm($id);
+                break;
+            case 'update': updateCountry($id);
+                break;
+            case 'delete': deleteCountry($id);
+                break;
+            default: echo "404 - Action pays inconnue.";
+                break;
+        }
+        break;
+
+        // 🏢 Sociétés (par pays)
+    case 'companies':
+        switch ($action) {
+            case null: listCompanies();
+                break;
+            case 'create': showCreateCompanyForm();
+                break;
+            case 'store': storeCompany();
+                break;
+            case 'edit': showEditCompanyForm($id);
+                break;
+            case 'update': updateCompany($id);
+                break;
+            case 'delete': deleteCompany($id);
+                break;
+            case 'by_country': fetchCompaniesByCountry($_GET['country_id'] ?? null);
+                break;
+            default: echo "404 - Action société inconnue.";
+                break;
+        }
+        break;
+
+        // 🤝 Partenaires
+    case 'partners':
+        switch ($action) {
+            case null: listPartners();
+                break;
+            case 'dashboard': partnerDashboard($id ?? ($_GET['id'] ?? null));
+                break;
+            case 'create': showCreatePartnerForm();
+                break;
+            case 'store': storePartner();
+                break;
+            case 'edit': showEditPartnerForm($id);
+                break;
+            case 'update': updatePartner($id);
+                break;
+            case 'delete': deletePartner($id);
+                break;
+            default: echo "404 - Action partenaire inconnue.";
+                break;
+        }
+        break;
+
+        // 🏦 Comptes partenaires
+    case 'accounts':
+        switch ($action) {
+            case null: listPartnerAccounts();
+                break;
+            case 'create': showCreatePartnerAccountForm();
+                break;
+            case 'store': storePartnerAccount();
+                break;
+            case 'edit': showEditPartnerAccountForm($id);
+                break;
+            case 'update': updatePartnerAccount($id);
+                break;
+            case 'delete': deletePartnerAccount($id);
+                break;
+            case 'by_partner': fetchAccountsByPartner($_GET['partner_id'] ?? null);
+                break;
+            default: echo "404 - Action compte inconnue.";
+                break;
+        }
+        break;
+
+        // 🧾 Factures sociétés
+    case 'company_invoices':
+        switch ($action) {
+            case null: listCompanyInvoices();
+                break;
+            case 'create': showCreateCompanyInvoiceForm();
+                break;
+            case 'store': storeCompanyInvoice();
+                break;
+            case 'show': showCompanyInvoice($id);
+                break;
+            case 'delete': deleteCompanyInvoice($id);
+                break;
+            case 'variants': fetchCompanyVariants($_GET['company_id'] ?? null);
+                break;
+            case 'pay': storeCompanyPayment();
+                break;
+            default: echo "404 - Action facture société inconnue.";
+                break;
+        }
+        break;
+
+        // 💸 Charges partenaires
+    case 'partner_expenses':
+        switch ($action) {
+            case null: listPartnerExpenses();
+                break;
+            case 'store': storePartnerExpense();
+                break;
+            default: echo "404 - Action charge inconnue.";
+                break;
+        }
+        break;
+
+        // 📊 Rapports
+    case 'reports':
+        switch ($action) {
+            case 'partners': partnerReport();
+                break;
+            case 'company_stock': companyStockReport();
+                break;
+            case 'company_dashboard': companyDashboard();
+                break;
+            default: echo "404 - Action rapport inconnue.";
                 break;
         }
         break;
@@ -108,6 +283,9 @@ switch ($resource) {
             case 'create': showCreateOrderForm();
                 break;
             case 'store': storeOrder();
+                break;
+            case 'variants':
+                fetchVariantsByProduct($_GET['product_id'] ?? null);
                 break;
             case 'edit': showEditOrderForm($id);
                 break;
@@ -161,6 +339,8 @@ switch ($resource) {
             case null: listClientSales();
                 break;
             case 'create': createClientSale($_GET['country_id'] ?? null);
+                break;
+            case 'variants_by_company': fetchCompanySaleVariants($_GET['company_id'] ?? null);
                 break;
             case 'store': storeClientSale();
                 break;

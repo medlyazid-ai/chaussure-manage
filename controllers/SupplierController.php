@@ -1,11 +1,20 @@
 <?php
 
 require_once 'models/Supplier.php';
+require_once 'models/Order.php';
+require_once 'models/Payment.php';
+require_once 'models/Shipment.php';
 
 function listSuppliers()
 {
     global $error;
-    $suppliers = Supplier::all();
+    $page = max(1, (int)($_GET['page'] ?? 1));
+    $perPage = 20;
+    $offset = ($page - 1) * $perPage;
+    $total = Supplier::countAll();
+    $totalPages = (int)ceil($total / $perPage);
+
+    $suppliers = Supplier::allPaged($perPage, $offset);
     include 'views/suppliers/index.php';
 }
 
@@ -65,6 +74,22 @@ function dashboard()
 
     $orders = Order::findBySupplier($supplierId);
     $payments = Payment::findBySupplier($supplierId);
+    $shipments = Shipment::bySupplier($supplierId);
+
+    // Stats
+    $totalOrders = count($orders);
+    $totalAmount = 0;
+    $totalPaid = 0;
+    $statusCounts = [];
+
+    foreach ($orders as $order) {
+        $total = Order::getTotalAmount($order['id']);
+        $paid = Payment::totalAllocatedToOrder($order['id']);
+        $totalAmount += $total;
+        $totalPaid += $paid;
+        $statusCounts[$order['status']] = ($statusCounts[$order['status']] ?? 0) + 1;
+    }
+    $totalRemaining = max($totalAmount - $totalPaid, 0);
 
     include 'views/suppliers/dashboard.php';
 }
